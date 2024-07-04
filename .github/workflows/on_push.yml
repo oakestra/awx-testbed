@@ -1,0 +1,55 @@
+name: Trigger AWX Job Template
+
+on:  
+  workflow_dispatch:
+    inputs:
+      topology:
+        description: 'Path to the topology file'
+        required: true
+        default: 'topology.json'
+
+jobs:
+  trigger-awx-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Read topology file ${{ github.event.inputs.topology }}
+        id: read_topology
+        run: |
+          cat ${{ github.event.inputs.topology }}  # Read file content
+      - name: Get the token
+        id: get_token
+        env:
+          TOWER_USER: ${{ secrets.TOWER_USER }}
+          TOWER_PASS: ${{ secrets.TOWER_PASS }}
+          TOWER_HOST: ${{ secrets.TOWER_HOST }}
+        run: |
+          response=$(curl -s -X POST "http://$TOWER_HOST/api/v2/users/1/personal_tokens/" \
+            -u "$TOWER_USER:$TOWER_PASS" \
+            -H "Content-Type: application/json" \
+            --insecure)  # --insecure is equivalent to validate_certs: false in Ansible
+          echo "$response" | jq .
+          token=$(echo "$response" | jq -r '.token')
+          echo "TOWER_API_TOKEN=$token" >> $GITHUB_ENV
+
+      - name: Use the token
+        env:
+          TOWER_HOST: ${{ secrets.TOWER_HOST }}
+          TEMPLATE_ID: ${{ secrets.TEMPLATE_ID }}
+          TOWER_API_TOKEN: ${{ env.TOWER_API_TOKEN }}
+          BRANCH: ${{ github.ref }}
+          COMMIT: ${{ github.sha }}
+          FILENAME: ${{ github.event.inputs.topology }}
+          
+        run: |
+          extra_vars_data=$(echo "{\"topology_descriptor\": \"$FILENAME\", \"branch\": \"$BRANCH\", \"commit\": \"$COMMIT\"}")
+          echo "$extra_vars_data"
+        
+          response=$(curl -s -X POST "http://$TOWER_HOST/api/v2/job_templates/$TEMPLATE_ID/launch/" \
+            -H "Authorization: Bearer $TOWER_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{ \"extra_vars\": $extra_vars_data }" \
+            --insecure)  # --insecure is equivalent to validate_certs: false in Ansible
+          echo "$response" | jq .

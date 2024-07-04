@@ -1,0 +1,28 @@
+- name: Remove Oakestra folder 
+  shell: rm -rf "{{ oak_repo_path }}"
+
+- name: Remove Oakestra Net folder 
+  shell: rm -rf "{{ oak_net_repo_path }}"
+
+- name: Delete existing containers
+  shell: "docker rm -f $(docker ps -a -q)"
+  become: True
+  ignore_errors: true
+
+- name: Delete existing volumes
+  shell: "docker volume rm -f $(docker volume ls -q)"
+  become: True
+  ignore_errors: true
+
+- name: Delete existing images
+  shell: "docker rmi -f $(docker images -q)"
+  become: True
+  ignore_errors: true
+
+- name: Delete existing networks
+  shell: "sudo docker network rm $(sudo docker network ls -q)"
+  become: True
+  ignore_errors: true
+
+
+  

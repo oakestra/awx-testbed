@@ -1,0 +1,9 @@
+- import_tasks: compile-node-engine.yml
+  when: 'not "v0." in oak_repo_version'
+
+- import_tasks: install-node-engine.yml
+  when: '"v0." in oak_repo_version'
+
+- name: Install Qemu
+  shell: while lsof /var/lib/dpkg/lock-frontend ; do sleep 10; done; apt -y install bridge-utils cpu-checker libvirt-clients libvirt-daemon qemu qemu-kvm    
+  become: true

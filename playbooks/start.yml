@@ -1,0 +1,75 @@
+---
+- name: Retrieve topology descriptor JSON from Git repository
+  hosts: localhost
+  tasks:
+    - name: Ensure the git package is installed
+      ansible.builtin.package:
+        name: git
+        state: present
+
+    - name: Create a temporary directory
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: repo
+      register: temp_repo_dir
+
+    - name: Clone the repository
+      ansible.builtin.git:
+        repo: "{{ repo }}"
+        dest: "{{ temp_repo_dir.path }}"
+        version: "{{ branch }}"
+        force: yes
+
+    - name: Checkout the specific commit
+      ansible.builtin.command:
+        cmd: git checkout "{{ commit }}"
+        chdir: "{{ temp_repo_dir.path }}"
+      register: git_checkout
+
+    - name: Ensure the commit checkout was successful
+      ansible.builtin.assert:
+        that:
+          - git_checkout.rc == 0
+        fail_msg: "Failed to checkout commit {{ commit }}"
+
+    - name: Read the topology descriptor JSON file
+      ansible.builtin.slurp:
+        src: "{{ temp_repo_dir.path }}/{{ topology_descriptor }}"
+      register: json_file_content
+
+    - name: Decode JSON content
+      set_fact:
+        topology_descriptor_content: "{{ json_file_content.content | b64decode }}"
+
+    - name: Display the topology descriptor content
+      ansible.builtin.debug:
+        msg: "{{ topology_descriptor_content }}"
+
+    - name: Run the Python script to validate JSON
+      command: python3 validator.py "{{ temp_repo_dir.path }}/{{ topology_descriptor }}"
+      args:
+          chdir: "{{ playbook_dir }}/../"  # Change this to the actual path where your validator.py script is located
+      register: validation_result
+
+    - name: Set environment variable with validation result
+      ansible.builtin.set_fact:
+        TOPOLOGY_VALIDITY: "{{ validation_result.stdout }}"
+
+    - name: Display the validation result
+      ansible.builtin.debug:
+        msg: "TOPOLOGY_VALIDITY is {{ TOPOLOGY_VALIDITY }}"
+
+    # Print topology descriptor content as JSON
+    - name: Print topology descriptor content as JSON
+      ansible.builtin.debug:
+        var: topology_descriptor_content
+
+    - include_tasks: vm_provisioning.yml
+      vars:
+        topology_desc: "{{ topology_descriptor_content | to_json}}"
+        topology_validity: "{{ TOPOLOGY_VALIDITY }}"
+        awx_api_url: "http://131.159.25.106"
+        awx_username: "admin"
+        awx_password: "password"
+        busy_vms_group: "busy_vms"
+        cmvm_pool_group: "cmvm_pool"

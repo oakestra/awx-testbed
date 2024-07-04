@@ -1,0 +1,23 @@
+- name: Install Net Manager
+  shell: wget -c https://github.com/oakestra/oakestra-net/releases/download/{{ oak_net_repo_version }}/NetManager_$(dpkg --print-architecture).tar.gz && tar -xzf NetManager_$(dpkg --print-architecture).tar.gz && chmod +x install.sh && ./install.sh $(dpkg --print-architecture)
+  become: true
+
+- name: Config netmanager public address 
+  environment:
+    PUB_ADDR: "{{ nodeIP }}"
+  shell: 'sed "s/0.0.0.0/$PUB_ADDR/" /etc/netmanager/netcfg.json > /etc/netmanager/netcfg.tmp.json'
+  become: true
+
+- name: Config netmanager Cluster URL
+  environment:
+    CLUSTER_ADDR: "{{ clusterIP }}"
+  shell: 'sed "s/ClusterUrl.*/ClusterUrl\": \"$CLUSTER_ADDR\",/g" /etc/netmanager/netcfg.tmp.json > /etc/netmanager/netcfg.tmp2.json'
+  become: true
+
+- name: Copy new config file
+  shell: 'cp /etc/netmanager/netcfg.tmp2.json /etc/netmanager/netcfg.json'
+  become: true
+
+- name: Remove tmp files
+  shell: 'rm /etc/netmanager/netcfg.tmp2.json && rm /etc/netmanager/netcfg.tmp.json'
+  become: true

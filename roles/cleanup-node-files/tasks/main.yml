@@ -1,0 +1,25 @@
+- name: Remove engines logs 
+  shell: rm -rf /tmp/*.log
+  become: true
+  ignore_errors: true
+
+- name: Remove node engine files
+  shell: rm -rf *NodeEngine*
+  become: true
+  ignore_errors: true
+
+- name: Remove net manager files
+  shell: rm -rf *NetManager*
+  become: true
+  ignore_errors: true
+
+- name: Remove net manager config files
+  shell: rm -rf /etc/netmanager
+  become: true
+  ignore_errors: true
+
+- name: Remove Oakestra folder 
+  shell: rm -rf "{{ oak_repo_path }}"
+
+- name: Remove Oakestra Net folder 
+  shell: rm -rf "{{ oak_net_repo_path }}"

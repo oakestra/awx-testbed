@@ -1,0 +1,108 @@
+---
+- name: Parse JSON input
+  set_fact:
+    topology: "{{ topology_desc | from_json }}"
+
+- name: Check if topology is valid
+  fail:
+    msg: "Topology is not valid. Deployment cannot proceed."
+  when: not topology_validity
+
+- name: Print topology
+  debug:
+    var: topology
+
+- name: Calculate required number of VMs
+  set_fact:
+    num_clusters: "{{ topology.topology_descriptor.cluster_list | length }}"
+    num_nodes: "{{ topology.topology_descriptor.cluster_list | map(attribute='number_of_nodes') | sum }}"
+    one_doc_enabled: "{{ topology.topology_descriptor.one_doc_enabled | bool }}"
+    together_root_cluster: "{{ topology.topology_descriptor.together_root_cluster | bool }}"
+
+- name: Verify if flag one_doc_enabled
+  set_fact:
+    plus_one: "{{ 1 if not one_doc_enabled and not together_root_cluster else 0 }}"
+
+- name: Requested hosts 
+  debug:
+    msg: "Number of clusters: {{ num_clusters }}, Number of nodes: {{ num_nodes }}, Plus one: {{ plus_one }}"
+
+- name: Total number of requested VMs
+  set_fact:
+    total_vms: "{{ (num_clusters | int) + (num_nodes | int) + (plus_one | int) }}"
+
+- name: Total number of VMs
+  debug:
+    msg: "Total number of VMs: {{ total_vms }}"
+
+- name: Inspect machine groups
+  debug:
+    msg: "Machine groups: {{ groups }}"
+
+- block:
+    - name: Find available VMs not tagged as busy
+      set_fact:
+        available_vm_list: "{{ groups['cmvm_pool'] | select('search', 'status_busy=false') | list }}"
+      vars:
+        search_expression: "{{ hostvars[item]['status'] != 'busy' }}"
+      loop: "{{ groups['cmvm_pool'] }}"
+      loop_control:
+        loop_var: item
+
+    - name: Print available VMs not tagged as busy
+      debug:
+        var: available_vm_list
+
+    - name: Ensure enough available VMs
+      fail:
+        msg: "Not enough available VMs in cmvm_pool. Required: {{ total_vms }}, Available: {{ available_vm_list | length }}"
+      when: (available_vm_list | length) < (total_vms | int)
+
+    - name: Reserve VMs
+      set_fact:
+        busy_vms: "{{ available_vm_list[:total_vms | int] }}"
+      when: (available_vm_list | length) >= (total_vms | int)
+
+    - name: Tag busy VMs with status=busy
+      add_host:
+        name: "{{ item }}"
+        status: busy
+      loop: "{{ busy_vms }}"
+      when: item in groups['all']
+
+    - name: Verify busy VMs status
+      debug:
+        msg: "Host {{ item }} status: {{ hostvars[item].status }}"
+      loop: "{{ busy_vms }}"
+      when: item in groups['all']
+
+  rescue:
+    - name: Handle failure
+      debug:
+        msg: "Failure encountered during VM processing."
+
+  always:
+    - name: Change the tag to status_busy=false for all busy VMs
+      add_host:
+        name: "{{ item }}"
+        status: false
+      loop: "{{ groups['all'] }}"
+      when: item in groups['all']
+
+    - name: Verify updated VMs status
+      debug:
+        msg: "Host {{ item }} status_busy: {{ hostvars[item].status }}"
+      loop: "{{ groups['all'] }}"
+      when: item in groups['all']
+
+    - include_tasks: github_results.yml
+      vars:
+        topology_desc: "{{ topology_descriptor }}"
+        result: "Not enough available VMs in cmvm_pool. Required: {{ total_vms }}, Available: {{ available_vm_list | length }}"
+      when: (available_vm_list | length) < (total_vms | int)
+  
+    - include_tasks: github_results.yml
+      vars:
+        topology_desc: "{{ topology_descriptor }}"
+        result: "Instantiating topology. Reserved VMs: {{ busy_vms }}, Available: {{ available_vm_list | length }}"
+      when: (available_vm_list | length) >= (total_vms | int)

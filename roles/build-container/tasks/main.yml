@@ -1,0 +1,3 @@
+- name: Building Container {{ image_name }}
+  command: docker build -t "{{ image_name }}" "{{ dockerfile_path }}"
+  become: True

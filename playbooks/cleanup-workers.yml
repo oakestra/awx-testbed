@@ -1,0 +1,4 @@
+- hosts: nodes
+  become: true
+  roles:
+    - cleanup-node-files

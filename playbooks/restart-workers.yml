@@ -1,0 +1,16 @@
+- hosts: nodes
+
+  roles:
+    - kill-all-workers
+
+  tasks:
+    - name: Restart Net Manager
+      shell: 'nohup /bin/NetManager -p 6000 {{ additionalNetManagerParams }} </dev/null >/tmp/netmanager.log 2>&1 &'
+      become: true
+
+    - name: Restart Node Engine
+      environment:
+        CLUSTER_IP: '{{ clusterIP }}'
+      shell: 'nohup /bin/NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 {{ additionalNodeEngineParams }} </dev/null >/tmp/nodeengine.log 2>&1 &'
+      become: true
+      when:  not ( proxy | default(false) )

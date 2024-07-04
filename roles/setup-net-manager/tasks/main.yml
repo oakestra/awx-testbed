@@ -1,0 +1,5 @@
+- import_tasks: compile-net-manager.yml
+  when: 'not "v0." in oak_net_repo_version'
+
+- import_tasks: install-net-manager.yml
+  when: '"v0." in oak_net_repo_version'

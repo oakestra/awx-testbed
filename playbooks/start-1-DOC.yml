@@ -1,0 +1,9 @@
+- hosts: all
+  roles:
+    - ensure-oakestra-repo-is-cloned
+    - start-1-doc
+  vars:
+    params: "-f run-a-cluster/override-alpha-versions.yaml"
+    path: "{{ oak_repo_path }}"
+    repo: "{{ oak_repo_link }}"
+    branch: "{{ oak_repo_version }}"

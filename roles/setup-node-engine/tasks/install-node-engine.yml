@@ -1,0 +1,4 @@
+- name: Install Node Engine
+  shell: "wget -c https://github.com/oakestra/oakestra/releases/download/{{ oak_repo_version }}/NodeEngine_$(dpkg --print-architecture).tar.gz && tar -xzf NodeEngine_$(dpkg --print-architecture).tar.gz && chmod +x install.sh && ./install.sh $(dpkg --print-architecture)"     
+  become: true
+

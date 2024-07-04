@@ -1,0 +1,18 @@
+- hosts: root
+  vars:
+    repo: "{{ oak_repo_link }}"
+    path: "{{ oak_repo_path }}"
+    branch: "{{ oak_repo_version }}"
+  roles:
+    - ensure-oakestra-repo-is-cloned 
+    - run-root
+
+- hosts: cluster
+  roles:
+    - role: ensure-oakestra-repo-is-cloned
+      vars:
+        repo: "{{ oak_repo_link }}"
+        path: "{{ oak_repo_path }}"
+        branch: "{{ oak_repo_version }}"
+    - role: run-cluster
+

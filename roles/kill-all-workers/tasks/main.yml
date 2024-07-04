@@ -1,0 +1,15 @@
+- name: Find PIDs of NodeEngine
+  community.general.pids:
+    name: NodeEngine
+  register: node_pids
+
+- name: Find PIDs of NetManager
+  community.general.pids:
+    name: NetManager
+  register: net_pids
+
+- name: Kill existing NodeEngine & NetManager processes
+  shell: "kill -9 {{ item }}"
+  loop: "{{ node_pids.pids + net_pids.pids }}"
+  become: true
+  ignore_errors: true

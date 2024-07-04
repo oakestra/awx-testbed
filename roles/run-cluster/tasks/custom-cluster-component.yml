@@ -1,0 +1,22 @@
+- name: Ensure cloned repo
+  ansible.builtin.include_role: 
+    name: ensure-oakestra-repo-is-cloned
+  vars: 
+    repo: "{{ oak_net_repo_link }}"
+    path: "{{ oak_net_repo_path }}"
+    branch: "{{ oak_net_repo_version }}"
+
+- name: Build net container
+  ansible.builtin.include_role: 
+    name: build-container
+  vars: 
+    image_name: "local_cluster_service_manager"
+    dockerfile_path: "{{ oak_net_repo_path }}/cluster-service-manager/service-manager"
+
+- name: Run Cluster Components with custom version
+  environment:
+    SYSTEM_MANAGER_URL: '{{ rootIP }}'
+    CLUSTER_NAME: '{{ clusterName }}'
+    CLUSTER_LOCATION: '{{ clusterLocation }}'
+  shell: "cd  {{ oak_repo_path }}/cluster_orchestrator && nohup docker compose -f docker-compose.yml -f override-local-service-manager.yml {{ additionalComposeOverrides }} up --build --detach"  
+  become: True

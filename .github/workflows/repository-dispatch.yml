@@ -1,0 +1,29 @@
+name: API Triggered Workflow
+
+on:
+  repository_dispatch:
+    types: [ api_call ] 
+
+jobs:
+  api_job:
+    runs-on: ubuntu-latest  
+
+    steps:
+      - uses: actions/checkout@v3  # Checkout the repository code
+
+      - name: AWX Result Notification
+        run: |
+          data=$(echo '${{ toJson(github.event.client_payload) }}' | jq .)
+          echo "Payload: $data"
+
+ 
+      - name: Send Push Notification
+        uses: techulus/push-github-action@1.0.0
+        env:
+            API_KEY: ${{ secrets.AWX_REPO_API_KEY }}
+            MESSAGE: "Test AWX notification to GitHub 🧪"
+            TITLE: Testing
+            LINK: https://localhost/api/v2/
+            SOUND: scifi
+            TIME_SENSITIVE: true
+

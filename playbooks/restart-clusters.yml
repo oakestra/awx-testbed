@@ -1,0 +1,15 @@
+- hosts: clusters
+  tasks:
+    - name: Kill Cluster components
+      command: "docker compose -f {{ oak_repo_path }}/cluster_orchestrator/docker-compose.yml  kill"
+      become: True
+
+- hosts: cluster
+  roles:
+    - role: ensure-oakestra-repo-is-cloned
+      vars:
+        repo: "{{ oak_repo_link }}"
+        path: "{{ oak_repo_path }}"
+        branch: "{{ oak_repo_version }}"
+    - role: run-cluster
+

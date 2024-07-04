@@ -1,0 +1,27 @@
+- name: Check if directory exists
+  ansible.builtin.include_role: 
+    name: ensure-oakestra-repo-is-cloned
+  vars:
+    repo: "{{ oak_repo_link }}"
+    path: "{{ oak_repo_path }}"
+    branch: "{{ oak_repo_version }}"
+
+- name: Check if Go is installed
+  ansible.builtin.include_role: 
+    name: gantsign.golang
+  vars:
+    golang_version: '1.21.3'
+    golang_install_dir: '/opt/go/1.21.3'
+    
+
+- name: Install go dependencies
+  shell: "cd {{ oak_repo_path }}/go_node_engine && /opt/go/1.21.3/bin/go get ."
+  args:
+    executable: /bin/bash
+  ignore_errors: yes
+
+- name: Build Node Engine 
+  shell: "cd {{ oak_repo_path }}/go_node_engine && /opt/go/1.21.3/bin/go build -o /bin/NodeEngine NodeEngine.go"
+  args:
+    executable: /bin/bash
+  become: true
