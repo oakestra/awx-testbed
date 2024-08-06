@@ -4,9 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       topology:
-        description: 'Path to the topology file'
+        description: 'Testbed repository - topology descriptor'
         required: true
         default: 'topology.json'
+      branch:
+        description: 'Oakestra repo branch'
+        required: true
+        default: 'main'
+      commit:
+          description: 'Oakestra repo commit'
+          required: true
+          type: string
+          default: 'HEAD'
 
 jobs:
   trigger-awx-job:
@@ -18,7 +27,7 @@ jobs:
       - name: Read topology file ${{ github.event.inputs.topology }}
         id: read_topology
         run: |
-          cat ${{ github.event.inputs.topology }}  # Read file content
+          cat ${{ github.event.inputs.topology }} 
       - name: Get the token
         id: get_token
         env:
@@ -39,15 +48,15 @@ jobs:
           TOWER_HOST: ${{ secrets.TOWER_HOST }}
           TEMPLATE_ID: ${{ secrets.TEMPLATE_ID }}
           TOWER_API_TOKEN: ${{ env.TOWER_API_TOKEN }}
-          BRANCH: ${{ github.ref }}
-          COMMIT: ${{ github.sha }}
+          BRANCH: ${{ github.event.inputs.branch }}
+          COMMIT: ${{ github.event.inputs.commit }}
           FILENAME: ${{ github.event.inputs.topology }}
           
         run: |
           extra_vars_data=$(echo "{\"topology_descriptor\": \"$FILENAME\", \"branch\": \"$BRANCH\", \"commit\": \"$COMMIT\"}")
           echo "$extra_vars_data"
         
-          response=$(curl -s -X POST "http://$TOWER_HOST/api/v2/job_templates/$TEMPLATE_ID/launch/" \
+          response=$(curl -s -X POST "http://$TOWER_HOST/api/v2/workflow_job_templates/$TEMPLATE_ID/launch/" \
             -H "Authorization: Bearer $TOWER_API_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{ \"extra_vars\": $extra_vars_data }" \

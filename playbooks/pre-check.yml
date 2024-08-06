@@ -1,9 +1,10 @@
 - hosts: all
   roles:
-    - ensure-oakestra-repo-is-cloned
-    - start-1-doc
+    - validate-topology
+    - vm-provisioning
   vars:
-    params: "-f run-a-cluster/override-alpha-versions.yaml"
     path: "{{ oak_repo_path }}"
     repo: "{{ oak_repo_link }}"
     branch: "{{ oak_repo_version }}"
+    GITHUB_USERNAME: "TheDarkPyotr"
+    GITHUB_REPO: "ansible-tests"

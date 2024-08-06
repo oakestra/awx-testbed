@@ -1,15 +1,24 @@
 - name: Find PIDs of NodeEngine
-  community.general.pids:
-    name: NodeEngine
+  shell: |
+    pgrep -f NodeEngine || true
   register: node_pids
 
 - name: Find PIDs of NetManager
-  community.general.pids:
-    name: NetManager
+  shell: |
+    pgrep -f NetManager || true
   register: net_pids
 
+- name: Set fact for NodeEngine PIDs
+  set_fact:
+    node_pids_list: "{{ node_pids.stdout_lines }}"
+
+- name: Set fact for NetManager PIDs
+  set_fact:
+    net_pids_list: "{{ net_pids.stdout_lines }}"
+
 - name: Kill existing NodeEngine & NetManager processes
-  shell: "kill -9 {{ item }}"
-  loop: "{{ node_pids.pids + net_pids.pids }}"
+  shell: |
+    kill -9 {{ item }}
+  loop: "{{ node_pids_list + net_pids_list }}"
   become: true
   ignore_errors: true

@@ -1,0 +1,20 @@
+- name: Execute Root+Cluster Deploy template if one_doc_enabled is true
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Fail if together_root_cluster is false
+      fail:
+        msg: "Deployment is skipped because together_root_cluster is false."
+      when: not together_root_cluster
+
+- name: Deploy components for Root+Cluster topology
+  hosts: localhost
+  gather_facts: false
+#  roles:
+#    - ensure-oakestra-repo-is-cloned
+#    - start-1-doc
+  vars:
+    params: "-f run-a-cluster/override-alpha-versions.yaml"
+    path: "{{ oak_repo_path }}"
+    repo: "{{ oak_repo_link }}"
+    branch: "{{ oak_repo_version }}"

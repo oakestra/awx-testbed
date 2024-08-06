@@ -1,0 +1,71 @@
+- name: Check deployed components running status
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Task for group_1doc
+      block:
+        - name: Run test against group_1doc
+          debug:
+            msg: "Run test against group_1doc: {{ group_1doc }}"
+        - name: Set stats for group_1doc
+          set_stats:
+            data:
+              group_1doc: "{{ group_1doc }}"
+      when: group_1doc is defined and group_1doc | length > 0
+
+    - name: Task for group_rc_together
+      block:
+        - name: Run test against group_rc_together
+          debug:
+            msg: "Run test against group_rc_together: {{ group_rc_together }}"
+        - name: Set stats for group_rc_together
+          set_stats:
+            data:
+              group_rc_together: "{{ group_rc_together }}"
+      when: group_rc_together is defined and group_rc_together | length > 0
+
+    - name: Task for group_rc_workers
+      block:
+        - name: Run test against group_rc_workers
+          debug:
+            msg: "Run test against group_rc_workers: {{ group_rc_workers }}"
+        - name: Set stats for group_rc_workers
+          set_stats:
+            data:
+              group_rc_workers: "{{ group_rc_workers }}"
+      when: group_rc_workers is defined and group_rc_workers | length > 0
+
+    - name: Task for group_root_full
+      block:
+        - name: Run test against group_root_full
+          debug:
+            msg: "Run test against group_root_full: {{ group_root_full }}"
+        - name: Set stats for group_root_full
+          set_stats:
+            data:
+              group_root_full: "{{ group_root_full }}"
+      when: group_root_full is defined and group_root_full | length > 0
+
+    - name: Task for group_clusters_full
+      block:
+        - name: Run test against group_clusters_full
+          debug:
+            msg: "Run test against group_clusters_full: {{ group_clusters_full }}"
+        - name: Set stats for group_clusters_full
+          set_stats:
+            data:
+              group_clusters_full: "{{ group_clusters_full }}"
+      when: group_clusters_full is defined and group_clusters_full | length > 0
+
+    - name: Task for group_workers_full
+      block:
+        - name: Run test against group_workers_full
+          debug:
+            msg: "Run test against group_workers_full: {{ group_workers_full }}"
+        - name: Set stats for group_workers_full
+          set_stats:
+            data:
+              group_workers_full: "{{ group_workers_full }}"
+      when: group_workers_full is defined and group_workers_full | length > 0
+
+

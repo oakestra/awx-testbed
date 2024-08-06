@@ -1,0 +1,12 @@
+- name: Remove OAK_ROLE environment variables
+  ansible.builtin.lineinfile:
+      path: /etc/environment
+      regexp: '^OAK_ROLE='
+      state: absent
+
+- name: OAK_STATUS environment variable to free
+  ansible.builtin.lineinfile:
+      path: /etc/environment
+      regexp: '^OAK_STATUS='
+      create: yes
+      line: 'OAK_STATUS=free'

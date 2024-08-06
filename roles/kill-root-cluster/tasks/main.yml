@@ -1,0 +1,17 @@
+- name: Set components_path
+  set_fact:
+    components_path: "{{ components_path }}"
+
+- name: Set repo_path
+  set_fact:
+    repo_path: "{{ repo_path }}"
+
+- name: Print repo_path and components_path
+  debug:
+    msg: "repo_path: {{ repo_path }}, components_path: {{ components_path }}"
+
+- name: Kill Cluster components
+  command: "docker compose -f {{ repo_path }}/{{ components_path }}  kill"
+  become: True
+  ignore_errors: true
+  when: "{{ group_clusters_full | length > 0 }}"

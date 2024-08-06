@@ -1,7 +1,11 @@
+- name: Show clusterName, clusterLocation, and rootIP
+  debug:
+    msg: "clusterName: {{ clusterName }}, clusterLocation: {{ clusterLocation }}, rootIP: {{ rootIP }}"
+
 - name: Run Root and Cluster Components in 1-DOC mode 
   environment:
     CLUSTER_NAME: '{{ clusterName }}'
     CLUSTER_LOCATION: '{{ clusterLocation }}'
     SYSTEM_MANAGER_URL: '{{ rootIP }}'  
-  shell: "cd {{ oak_repo_path }}/run-a-cluster && docker compose -f 1-DOC.yaml {{ additionalComposeOverrides }} up --detach"
+  shell: "cd {{ oak_repo_path }}/run-a-cluster && nohup docker compose -f 1-DOC.yaml {{ additionalComposeOverrides }} up --detach"
   become: True

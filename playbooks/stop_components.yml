@@ -1,0 +1,99 @@
+---
+- hosts: "{{ group_1doc }}"
+  roles:
+    - unset
+    - kill-all-workers
+  tasks:
+    - name: Kill 1DOC processes on node {{ inventory_hostname }}
+      command: "docker compose -f {{ oak_repo_path }}/run-a-cluster/1-DOC.yaml down"
+      become: True
+      ignore_errors: true
+
+    - name: Clean 1DOC files node on node {{ inventory_hostname }}
+      ansible.builtin.include_role:
+        name: cleanup-root-cluster
+      vars:
+        repo_path: "{{ oak_repo_path }}"
+        net_repo_path: "{{ oak_net_repo_path }}"
+
+- hosts: "{{ group_workers_full }}"
+  roles:
+    - unset
+    - kill-all-workers
+
+- hosts: "{{ group_clusters_full }}"
+  tasks:
+    - name: Set components_path
+      set_fact:
+        components_path: "/cluster_orchestrator/docker-compose.yml"
+
+    - name: Show oak_repo_path and components_path
+      debug:
+        msg: "oak_repo_path: {{ oak_repo_path }}, components_path: {{ components_path }}" 
+
+    - name: Kill cluster processes on node {{ inventory_hostname }}
+      command: "docker compose -f {{ oak_repo_path }}{{ components_path }}  kill"
+      become: True
+      ignore_errors: true
+
+    - name: Clean cluster node on node {{ inventory_hostname }}
+      ansible.builtin.include_role:
+        name: cleanup-root-cluster
+      vars:
+        repo_path: "{{ oak_repo_path }}"
+        net_repo_path: "{{ oak_net_repo_path }}"
+
+    - name: Change status of cluster node {{ inventory_hostname }} to free
+      ansible.builtin.include_role:
+        name: unset
+ # roles:
+ #   - kill-root-cluster
+#   - cleanup-root-cluster
+#  vars:
+#    components_path: "/cluster_orchestrator/docker-compose.yml"
+#    oak_repo_path: "{{ oak_repo_path }}"
+#    oak_net_repo_path: "{{ oak_net_repo_path }}"
+  #tasks:
+  #  - name: Kill Cluster components
+  #    command: "docker compose -f {{ oak_repo_path }}/cluster_orchestrator/docker-compose.yml  kill"
+  #    become: True
+  #    when: "{{ group_clusters_full | length > 0 }}"
+
+- hosts: "{{ group_root_full }}"
+  tasks:
+    - name: Set components_path
+      set_fact:
+        components_path: "/root_orchestrator/docker-compose.yml"
+
+    - name: Show oak_repo_path and components_path on node {{ inventory_hostname }} 
+      debug:
+        msg: "oak_repo_path: {{ oak_repo_path }}, components_path: {{ components_path }}"
+
+    - name: Kill root processes on node {{ inventory_hostname }}
+      include_role:
+        name: kill-root-cluster
+      vars:
+        components_path: "root_orchestrator/docker-compose.yml"
+        repo_path: "{{ oak_repo_path }}"
+        
+
+    - name: Clean cluster node on node {{ inventory_hostname }}
+      include_role:
+        name: cleanup-root-cluster
+      vars:
+        components_path: "root_orchestrator/docker-compose.yml"
+        repo_path: "{{ oak_repo_path }}"
+        net_repo_path: "{{ oak_net_repo_path }}"
+
+    - name: Change status of cluster node {{ inventory_hostname }} to free
+      ansible.builtin.include_role:
+        name: unset
+ # roles:
+ #   - kill-root-cluster
+ #   - cleanup-root-cluster
+  #  oak_net_repo_path: "{{ oak_net_repo_path }}"
+  #tasks:
+  #  - name: Kill Root components
+  #    command: "docker compose -f {{ oak_repo_path }}/root_orchestrator/docker-compose.yml kill"
+  #    become: True
+  #    when: "{{ group_root_full | length > 0 }}"

@@ -18,5 +18,5 @@
     SYSTEM_MANAGER_URL: '{{ rootIP }}'
     CLUSTER_NAME: '{{ clusterName }}'
     CLUSTER_LOCATION: '{{ clusterLocation }}'
-  shell: "cd  {{ oak_repo_path }}/cluster_orchestrator && nohup docker compose -f docker-compose.yml -f override-local-service-manager.yml {{ additionalComposeOverrides }} up --build --detach"  
+  shell: "cd  {{ oak_repo_path }}/cluster_orchestrator && nohup docker compose -f docker-compose.yml -f override-local-service-manager.yml up --build --detach"  
   become: True

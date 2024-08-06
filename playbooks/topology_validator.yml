@@ -2,7 +2,7 @@
 - name: Retrieve topology descriptor JSON from Git repository
   hosts: localhost
   vars:
-    repo: "https://github.com/oakestra/awx-testbed"
+    repo: "https://github.com/TheDarkPyotr/ansible-tests"
 
   gather_facts: no
 
@@ -17,12 +17,12 @@
       ansible.builtin.git:
         repo: "{{ repo }}"
         dest: "{{ temp_repo_dir.path }}"
-        version: "{{ branch }}"
+        version: "main" # Branch of testbed repository
         force: yes
 
     - name: Checkout the specific commit
       ansible.builtin.command:
-        cmd: git checkout "{{ commit }}"
+        cmd: git checkout HEAD
         chdir: "{{ temp_repo_dir.path }}"
       register: git_checkout
 
@@ -32,8 +32,7 @@
           - git_checkout.rc == 0
         fail_msg: "Failed to checkout commit {{ commit }}"
 
-    # print all the files in the cloned repository
-    - name: List all files in the cloned repository
+    - name: Inspect the cloned repository
       ansible.builtin.find:
         paths: "{{ temp_repo_dir.path }}"
         recurse: yes
@@ -43,21 +42,21 @@
       ansible.builtin.debug:
         msg: "{{ files.files | map(attribute='path') | list }}"
         
-    - name: Read the topology descriptor JSON file
+    - name: Read {{ topology_descriptor }} topology descriptor JSON file
       ansible.builtin.slurp:
-        src: "{{ temp_repo_dir.path }}/{{ topology_descriptor }}"
+        src: "{{ temp_repo_dir.path }}/topologies/{{ topology_descriptor }}"
       register: json_file_content
 
-    - name: Decode JSON content
+    - name: Decode {{ topology_descriptor }} JSON content
       set_fact:
         topology_descriptor_content: "{{ json_file_content.content | b64decode }}"
 
-    - name: Display the topology descriptor content
+    - name: Display {{ topology_descriptor }}
       ansible.builtin.debug:
         msg: "{{ topology_descriptor_content }}"
 
-    - name: Run the Python script to validate JSON in {{ temp_repo_dir.path }}
-      command: python3 "{{ temp_repo_dir.path }}"/validator.py "{{ temp_repo_dir.path }}/{{ topology_descriptor }}"
+    - name: Support execution for topology validation {{ temp_repo_dir.path }}
+      command: python3 "{{ temp_repo_dir.path }}"/utils/validator.py "{{ temp_repo_dir.path }}/{{ topology_descriptor }}"
       register: validation_result
 
     - name: Ensure the validation script was successful
@@ -66,25 +65,18 @@
           - validation_result.rc == 0
         fail_msg: "Failed to validate the topology descriptor"
 
-    - name: Set environment variable with validation result
+    - name: Retrieve validation result
       ansible.builtin.set_fact:
         TOPOLOGY_VALIDITY: "{{ validation_result.stdout }}"
 
-    - name: Display the validation result
-      ansible.builtin.debug:
-        msg: "TOPOLOGY_VALIDITY is {{ TOPOLOGY_VALIDITY }}"
-
-    # Print topology descriptor content as JSON
-    - name: Print topology descriptor content as JSON
-      ansible.builtin.debug:
-        var: topology_descriptor_content
-
-    - include_tasks: vm_provisioning.yml
-      vars:
-        topology_desc: "{{ topology_descriptor_content | to_json}}"
-        topology_validity: "{{ TOPOLOGY_VALIDITY | bool}}"
-        awx_api_url: "http://131.159.25.106"
-        awx_username: "admin"
-        awx_password: "password"
-        busy_vms_group: "busy_vms"
-        cmvm_pool_group: "cmvm_pool"
+    - name: Fail if topology_validity is false
+      fail:
+        msg: "Topology descriptor {{ topology_descriptor }} is not valid"
+      when: not TOPOLOGY_VALIDITY
+      
+    - name: "Set facts for provisioning workflow"
+      set_stats:
+        data:
+          topology_desc: "{{ topology_descriptor_content | to_json}}"
+          topology_validity: "{{ TOPOLOGY_VALIDITY | bool}}"
+          oak_repo_commit: "{{ commit }}"

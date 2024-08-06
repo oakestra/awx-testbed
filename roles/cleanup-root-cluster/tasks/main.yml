@@ -1,8 +1,10 @@
 - name: Remove Oakestra folder 
-  shell: rm -rf "{{ oak_repo_path }}"
+  shell: rm -rf "{{ repo_path }}"
+  become: True
 
 - name: Remove Oakestra Net folder 
-  shell: rm -rf "{{ oak_net_repo_path }}"
+  shell: rm -rf "{{ net_repo_path }}"
+  become: True
 
 - name: Delete existing containers
   shell: "docker rm -f $(docker ps -a -q)"

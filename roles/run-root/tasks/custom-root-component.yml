@@ -16,5 +16,5 @@
 - name: Run Root Components with custom version
   environment:
     SYSTEM_MANAGER_URL: '{{ rootIP }}'  
-  shell: "cd  {{ oak_repo_path }}/root_orchestrator && nohup docker compose -f docker-compose.yml -f override-local-service-manager.yml {{ additionalComposeOverrides }} up --build --detach"
+  shell: "cd  {{ oak_repo_path }}/root_orchestrator && nohup docker compose -f docker-compose.yml -f override-local-service-manager.yml up --build --detach"
   become: True

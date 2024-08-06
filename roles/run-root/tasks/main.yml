@@ -1,7 +1,7 @@
 - name: Run Root Components
   environment:
     SYSTEM_MANAGER_URL: '{{ rootIP }}'  
-  shell: cd  {{ oak_repo_path }}/root_orchestrator && nohup docker compose -f docker-compose.yml {{ additionalComposeOverrides }} up --build --detach
+  shell: cd  {{ oak_repo_path }}/root_orchestrator && nohup docker compose -f docker-compose.yml up --build --detach
   become: True
   when: '"v0." in oak_net_repo_version'
 

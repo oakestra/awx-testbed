@@ -1,9 +1,0 @@
-- hosts: root,cluster
-  become: true
-  roles:
-    - cleanup-root-cluster
-
-- hosts: nodes
-  become: true
-  roles:
-    - cleanup-node-files
