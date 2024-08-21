@@ -1,0 +1,134 @@
+- name: Retrieve local hostname list
+  set_fact:
+    workers_hostname: >
+      {{ hostvars | dict2items
+      | selectattr('value.local_hostname', 'defined')
+      | map(attribute='value.local_hostname.stdout')
+      | list }}
+
+- name: Available hostnames display
+  debug:
+    msg: "Available hostnames: {{ workers_hostname }}"
+
+- name: Print group_clusters
+  debug:
+    msg: "group_clusters: {{ group_clusters }}"
+
+- name: Print group_root
+  debug:
+    msg: "group_root: {{ group_root }}"
+
+- name: Set topology_desc JSON string
+  set_fact:
+    topology_desc_json: "{{ topology_desc | to_nice_json }}"
+
+- name: Set workers list JSON string
+  set_fact:
+    workers_json: "{{ workers_hostname | list }}"
+
+- name: Save topology_desc to a file
+  ansible.builtin.copy:
+    content: "{{ topology_desc_json }}"
+    dest: "/tmp/topology_desc.json"
+
+- name: Upgrade pip to the latest version
+  pip:
+    name: pip
+    state: latest
+    executable: pip3
+  become: true
+
+- name: Install Python packages from requirements.txt
+  pip:
+    requirements: ./utils/topology-app-deploy/requirements.txt
+    executable: /usr/local/bin/pip3
+    chdir: ..
+  become: true
+  become_user: root
+
+- name: Install script dependencies
+  ansible.builtin.shell: |
+    pip3 install -r ../utils/topology-app-deploy/requirements.txt
+  become: true
+  become_user: root
+
+- name: Execute the Python script with sudo and parameters
+  command: >
+    sudo /usr/bin/python3 ../utils/topology-app-deploy/update_sla.py "/tmp/topology_desc.json" "{{ workers_json }}" "{{ group_clusters }}" "{{ group_root }}"
+  register: result_output
+  become: true
+  become_user: root
+
+- name: Read updated SLA JSON file
+  ansible.builtin.slurp:
+    src: /tmp/updated_sla.json
+  register: slurped_file_update_sla
+
+- name: Decode updated SLA JSON content
+  ansible.builtin.set_fact:
+    updated_sla: "{{ slurped_file_update_sla['content'] | b64decode | from_json }}"
+
+- name: Debug updated SLA JSON content
+  debug:
+    msg: "{{ updated_sla }}"
+
+- name: Read dict of successfully executed processes
+  ansible.builtin.slurp:
+    src: /tmp/run_process_dictionary.json
+  register: slurped_file_success
+
+- name: Read dict of failed executed processes
+  ansible.builtin.slurp:
+    src: /tmp/failed_process_dictionary.json
+  register: slurped_file_failed
+
+- name: Decode success process dictionary
+  ansible.builtin.set_fact:
+    worker_process_dict: "{{ slurped_file_success['content'] | b64decode | from_json }}"
+
+- name: Decode failed process dictionary
+  ansible.builtin.set_fact:
+    services_fail_process_dict: "{{ slurped_file_failed['content'] | b64decode | from_json }}"
+
+- name: Debug worker successfully executed process dictionary
+  debug:
+    msg: "{{ worker_process_dict }}"
+
+- name: Debug worker failed executed process dictionary
+  debug:
+    msg: "{{ services_fail_process_dict }}"
+
+- name: Retrieve machine inventory hostnames from IPs
+  ansible.builtin.set_fact:
+    ip_to_hostname: >-
+      {{
+        ip_to_hostname | default({})
+        | combine({item.key: hostvars | dict2items | selectattr('value.ansible_host', 'equalto', item.key) | map(attribute='key') | first})
+      }}
+  loop: "{{ worker_process_dict | dict2items }}"
+  vars:
+    ip_to_hostname: {}
+
+- name: Debug IP hostname mapping
+  debug:
+    msg: "{{ ip_to_hostname }}"
+
+- name: Check if process is running on the remote host
+  ansible.builtin.shell: |
+    if pgrep -f "{{ item.value }}"; then
+      echo "Process "{{ item.value }}" is running"
+    else
+      echo "Process "{{ item.value }}" not running"
+      exit 1
+    fi
+  args:
+    warn: false
+  delegate_to: "{{ ip_to_hostname[item.key] }}"
+  loop: "{{ worker_process_dict | dict2items }}"
+  register: process_check_results  # Register the output of the task
+  ignore_errors: false
+
+- name: Print the output of the process check task
+  debug:
+    msg: "{{ item.stdout_lines[2] }}"
+  loop: "{{ process_check_results.results }}"

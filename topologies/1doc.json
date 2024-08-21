@@ -1,0 +1,62 @@
+{
+  "topology_descriptor": {
+    "one_doc_enabled": true,
+    "together_root_cluster": false,
+    "cluster_list": [
+      {
+        "cluster_number": 1,
+        "number_of_nodes": 1,
+        "sla_descriptor": {
+          "sla_version": "v2.0",
+          "customerID": "Admin",
+          "applications": [
+            {
+              "applicationID": "",
+              "application_name": "longRunning",
+              "application_namespace": "test",
+              "application_desc": "Service1",
+              "microservices": [
+                {
+                  "microserviceID": "",
+                  "microservice_name": "service1",
+                  "microservice_namespace": "test1",
+                  "virtualization": "container",
+                  "cmd": ["sh", "-c", "while true; do echo 'Service 1 running'; sleep 60; done"],
+                  "memory": 10,
+                  "vcpus": 1,
+                  "vgpus": 0,
+                  "vtpus": 0,
+                  "bandwidth_in": 0,
+                  "bandwidth_out": 0,
+                  "storage": 0,
+                  "code": "docker.io/library/alpine:latest",
+                  "state": "",
+                  "port": "",
+                  "added_files": []
+                },
+                {
+                  "microserviceID": "",
+                  "microservice_name": "service2",
+                  "microservice_namespace": "test2",
+                  "virtualization": "container",
+                  "cmd": ["sh", "-c", "while true; do echo 'Service 2 running'; sleep 60; done"],
+                  "memory": 10,
+                  "vcpus": 1,
+                  "vgpus": 0,
+                  "vtpus": 0,
+                  "bandwidth_in": 0,
+                  "bandwidth_out": 0,
+                  "storage": 0,
+                  "code": "docker.io/library/alpine:latest",
+                  "state": "",
+                  "port": "",
+                  "added_files": []
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

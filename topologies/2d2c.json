@@ -1,0 +1,118 @@
+{
+    "topology_descriptor": {
+    "one_doc_enabled": false, 
+    "together_root_cluster": false,
+    "cluster_list": [
+      {
+        "cluster_number": 2,
+        "number_of_nodes": 1,
+        "sla_descriptor": {
+            "sla_version" : "v2.0",
+            "customerID" : "Admin",
+            "applications" : [
+              {
+                  "applicationID" : "",
+                  "application_name" : "newapp",
+                  "application_namespace" : "test2",
+                  "application_desc" : "New application with two long-running services",
+                  "microservices" : [
+                    {
+                      "microserviceID": "",
+                      "microservice_name": "service1",
+                      "microservice_namespace": "test1",
+                      "virtualization": "container",
+                      "cmd": ["sh", "-c", "while true; do echo 'Service 1 running'; sleep 60; done"],
+                      "memory": 1,
+                      "vcpus": 0,
+                      "vgpus": 0,
+                      "vtpus": 0,
+                      "bandwidth_in": 0,
+                      "bandwidth_out": 0,
+                      "storage": 0,
+                      "code": "docker.io/library/alpine:latest",
+                      "state": "",
+                      "port": "",
+                      "added_files": []
+                    },
+                    {
+                      "microserviceID": "",
+                      "microservice_name": "service2",
+                      "microservice_namespace": "test2",
+                      "virtualization": "container",
+                      "cmd": ["sh", "-c", "while true; do echo 'Service 2 running'; sleep 60; done"],
+                      "memory": 1,
+                      "vcpus": 0,
+                      "vgpus": 0,
+                      "vtpus": 0,
+                      "bandwidth_in": 0,
+                      "bandwidth_out": 0,
+                      "storage": 0,
+                      "code": "docker.io/library/alpine:latest",
+                      "state": "",
+                      "port": "",
+                      "added_files": []
+                    }
+                  ]
+                }
+            ]
+          }
+      },
+      {
+        "cluster_number": 1,
+        "number_of_nodes": 1,
+        "sla_descriptor": {
+            "sla_version" : "v2.0",
+            "customerID" : "Admin",
+            "applications" : [
+              {
+                "applicationID" : "",
+                "application_name" : "clientsrvr1",
+                "application_namespace" : "test1",
+                "application_desc" : "Simple demo with curl client and Nginx server",
+                "microservices" : [
+                  {
+                    "microserviceID": "",
+                    "microservice_name": "curl",
+                    "microservice_namespace": "test1",
+                    "virtualization": "container",
+                    "cmd": ["sh", "-c", "curl 10.30.55.55 ; sleep 5"],
+                    "memory": 1,
+                    "vcpus": 1,
+                    "vgpus": 0,
+                    "vtpus": 0,
+                    "bandwidth_in": 0,
+                    "bandwidth_out": 0,
+                    "storage": 0,
+                    "code": "docker.io/curlimages/curl:7.82.0",
+                    "state": "",
+                    "port": "",
+                    "added_files": []
+                  },
+                  {
+                    "microserviceID": "",
+                    "microservice_name": "nginx",
+                    "microservice_namespace": "test1",
+                    "virtualization": "container",
+                    "cmd": [],
+                    "memory": 1,
+                    "vcpus": 1,
+                    "vgpus": 0,
+                    "vtpus": 0,
+                    "bandwidth_in": 0,
+                    "bandwidth_out": 0,
+                    "storage": 0,
+                    "code": "docker.io/library/nginx:latest",
+                    "state": "",
+                    "port": "80:80/tcp",
+                    "addresses": {
+                      "rr_ip": "10.30.55.55"
+                    },
+                    "added_files": []
+                  }
+                ]
+              }
+            ]
+          }
+      }]
+  }
+}

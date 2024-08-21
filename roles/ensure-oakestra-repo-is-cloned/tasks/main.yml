@@ -1,5 +1,5 @@
 ---
-- name: Ensure dedicated oakestra-ansible directory exists
+- name: Ensure dedicated oakestra repository directory exists
   ansible.builtin.file:
     path: "{{ path }}"
     state: directory
@@ -13,6 +13,6 @@
 
 - name: Fetch all tags from remote
   ansible.builtin.command: git fetch --tags --force
-  become: yes
+  become: true
   args:
     chdir: "{{ path }}"

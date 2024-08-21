@@ -8,7 +8,7 @@
 
 # This is installing go in a wierd path. Check if config is correct.
 - name: Check if Go is installed
-  ansible.builtin.include_role: 
+  ansible.builtin.include_role:
     name: gantsign.golang
   vars:
     golang_version: '1.21.3'

@@ -1,0 +1,49 @@
+- name: Find PIDs of NodeEngine
+  shell: |
+    pgrep -f NodeEngine || true
+  register: node_pids
+
+- name: Find PIDs of NetManager
+  shell: |
+    pgrep -f NetManager || true
+  register: net_pids
+
+- name: Set fact for NodeEngine PIDs
+  set_fact:
+    node_pids_list: "{{ node_pids.stdout_lines }}"
+
+- name: Check node_pids_list is not empty
+  fail:
+    msg: "NodeEngine PIDs not found"
+  when: node_pids_list == []
+
+- name: Set fact for NetManager PIDs
+  set_fact:
+    net_pids_list: "{{ net_pids.stdout_lines }}"
+
+- name: Check net_pids_list is not empty
+  fail:
+    msg: "NetManager PIDs not found"
+  when: net_pids_list == []
+
+- name: Check NetManager log files for errors
+  shell: |
+    cat /tmp/netmanager.log | grep "ERROR"
+  register: netmanager_error
+  ignore_errors: true
+
+- name: Show NetManager error log
+  debug:
+    msg: "{{ netmanager_error.stdout }}"
+  when: netmanager_error.stdout is defined
+
+- name: Check NodeEngine log files for errors
+  shell: |
+    cat /tmp/nodeengine.log | grep "ERROR"
+  register: nodeengine_error
+  ignore_errors: true
+
+- name: Show NodeEngine error log
+  debug:
+    msg: "{{ nodeengine_error.stdout }}"
+  when: nodeengine_error.stdout is defined

@@ -1,24 +1,25 @@
 ---
-- name: Retrieve topology descriptor JSON from Git repository
+- name: 1. Topology Validator Phase
   hosts: localhost
   vars:
-    repo: "https://github.com/TheDarkPyotr/ansible-tests"
+    testbed_repo: "https://github.com/TheDarkPyotr/ansible-tests"
+    testbed_repo_branch: "main"
 
-  gather_facts: no
+  gather_facts: false
 
   tasks:
-    - name: Create a temporary directory
+    - name: Create a temporary directory for testbed files
       ansible.builtin.tempfile:
         state: directory
-        suffix: repo
+        suffix: _testbed_repo
       register: temp_repo_dir
 
-    - name: Clone the repository
+    - name: Clone the testbed repository
       ansible.builtin.git:
-        repo: "{{ repo }}"
+        repo: "{{ testbed_repo }}"
         dest: "{{ temp_repo_dir.path }}"
-        version: "main" # Branch of testbed repository
-        force: yes
+        version: "{{ testbed_repo_branch }}" # Branch of testbed repository
+        force: true
 
     - name: Checkout the specific commit
       ansible.builtin.command:
@@ -26,19 +27,19 @@
         chdir: "{{ temp_repo_dir.path }}"
       register: git_checkout
 
-    - name: Ensure the commit checkout was successful
+    - name: Ensure the commit checkout
       ansible.builtin.assert:
         that:
           - git_checkout.rc == 0
         fail_msg: "Failed to checkout commit {{ commit }}"
 
-    - name: Inspect the cloned repository
+    - name: Register testbed repository files
       ansible.builtin.find:
         paths: "{{ temp_repo_dir.path }}"
         recurse: yes
       register: files
 
-    - name: Display all files in the cloned repository
+    - name: List testbed repository files
       ansible.builtin.debug:
         msg: "{{ files.files | map(attribute='path') | list }}"
         
@@ -55,26 +56,31 @@
       ansible.builtin.debug:
         msg: "{{ topology_descriptor_content }}"
 
-    - name: Support execution for topology validation {{ temp_repo_dir.path }}
-      command: python3 "{{ temp_repo_dir.path }}"/utils/validator.py "{{ temp_repo_dir.path }}/{{ topology_descriptor }}"
+    - name: Execute validator script for {{ topology_descriptor }}
+      command: python3 "{{ temp_repo_dir.path }}"/utils/topology_validator/validator.py "{{ temp_repo_dir.path }}/topologies/{{ topology_descriptor }}"
       register: validation_result
 
-    - name: Ensure the validation script was successful
+    - name: Check topology validity script execution
       ansible.builtin.assert:
         that:
           - validation_result.rc == 0
         fail_msg: "Failed to validate the topology descriptor"
 
-    - name: Retrieve validation result
+    - name: Store validation result
       ansible.builtin.set_fact:
         TOPOLOGY_VALIDITY: "{{ validation_result.stdout }}"
 
-    - name: Fail if topology_validity is false
+    - include_tasks: github_results.yml
+      vars:
+        result: "Topology description {{ topology_descriptor }} vadalition returned {{ TOPOLOGY_VALIDITY | bool}}"
+        parameters: "{{ topology_descriptor_content | to_json}}"
+
+    - name: Stop execution if topology descriptor is invalid
       fail:
         msg: "Topology descriptor {{ topology_descriptor }} is not valid"
       when: not TOPOLOGY_VALIDITY
-      
-    - name: "Set facts for provisioning workflow"
+
+    - name: "Set facts for provisioning phase"
       set_stats:
         data:
           topology_desc: "{{ topology_descriptor_content | to_json}}"

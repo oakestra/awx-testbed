@@ -1,0 +1,82 @@
+{
+    "topology_descriptor": {
+    "one_doc_enabled": false, 
+    "together_root_cluster": true,
+    "cluster_list": [{
+      "cluster_number": 1,
+      "number_of_nodes": 3,
+      "sla_descriptor": {
+          "sla_version" : "v2.0",
+          "customerID" : "Admin",
+          "applications" : [
+            {
+              "applicationID" : "",
+              "application_name" : "clientsrvr",
+              "application_namespace" : "test",
+              "application_desc" : "Simple demo with curl client and Nginx server",
+              "microservices" : [
+                {
+                  "microserviceID": "",
+                  "microservice_name": "curl",
+                  "microservice_namespace": "test",
+                  "virtualization": "container",
+                  "cmd": ["sh", "-c", "curl 10.30.55.55 ; sleep 5"],
+                  "memory": 100,
+                  "vcpus": 1,
+                  "vgpus": 0,
+                  "vtpus": 0,
+                  "bandwidth_in": 0,
+                  "bandwidth_out": 0,
+                  "storage": 0,
+                  "code": "docker.io/curlimages/curl:7.82.0",
+                  "state": "",
+                  "port": "",
+                  "added_files": [],
+                  "constraints":[]
+                },
+                {
+                  "microserviceID": "",
+                  "microservice_name": "nginx",
+                  "microservice_namespace": "test",
+                  "virtualization": "container",
+                  "cmd": [],
+                  "memory": 100,
+                  "vcpus": 1,
+                  "vgpus": 0,
+                  "vtpus": 0,
+                  "bandwidth_in": 0,
+                  "bandwidth_out": 0,
+                  "storage": 0,
+                  "code": "docker.io/library/nginx:latest",
+                  "state": "",
+                  "port": "80:80/tcp",
+                  "addresses": {
+                    "rr_ip": "10.30.55.55"
+                  },
+                  "added_files": []
+                },
+                {
+                  "microserviceID": "",
+                  "microservice_name": "service3",
+                  "microservice_namespace": "test3",
+                  "virtualization": "container",
+                  "cmd": ["sh", "-c", "while true; do echo 'Service 3 running'; sleep 60; done"],
+                  "memory": 1,
+                  "vcpus": 0,
+                  "vgpus": 0,
+                  "vtpus": 0,
+                  "bandwidth_in": 0,
+                  "bandwidth_out": 0,
+                  "storage": 0,
+                  "code": "docker.io/library/alpine:latest",
+                  "state": "",
+                  "port": "",
+                  "added_files": []
+                }
+              ]
+            }
+          ]
+        }
+      }]
+  }
+}

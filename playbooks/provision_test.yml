@@ -1,4 +1,4 @@
-- name: Execute Hosts Provision
+- name: 2. Host Provisioning Phase
   hosts: localhost
   tasks:
 
@@ -6,14 +6,18 @@
       set_fact:
         topology: "{{ topology_desc | from_json }}"
 
-    - name: Calculate required number of VMs
+    - name: Retrieved topology
+      debug:
+        var: topology
+
+    - name: Compute required number of hosts based on topology
       set_fact:
         num_clusters: "{{ topology.topology_descriptor.cluster_list | length }}"
         num_nodes: "{{ topology.topology_descriptor.cluster_list | map(attribute='number_of_nodes') | sum }}"
         one_doc_enabled: "{{ topology.topology_descriptor.one_doc_enabled | bool }}"
         together_root_cluster: "{{ topology.topology_descriptor.together_root_cluster | bool }}"
 
-    - name: Calculate requested_vms based on one_doc_enabled and together_root_cluster flags
+    - name: Compute requested_vms based on one_doc_enabled and together_root_cluster flags
       set_fact:
         requested_vms: >-
           {%- if one_doc_enabled -%}
@@ -24,37 +28,37 @@
           {{ (1 | int) + (num_clusters | int) + (num_nodes | int) }}
           {%- endif -%}
 
-    - name: Set requested_vms fact for further use
+    - name: Store requested_vms in stats
       set_stats:
         data:
           requested_vms: "{{ requested_vms }}"
 
-- name: Check hosts for OAK_STATUS
+- name: Check hosts availability by inspecting $OAK_STATUS
   hosts: all
   gather_facts: false
   tasks:
-    - name: Check OAK_STATUS for {{ inventory_hostname }}
+    - name: Check OAK_STATUS for each inventory host
       shell: |
         echo $OAK_STATUS
       register: oak_status
 
-    - name: Set host availability for {{ inventory_hostname }}
+    - name: Set host availability if not busy 
       set_fact:
         host_available: "{{ oak_status.stdout != 'busy' }}"
       when: oak_status.stdout is defined
 
-    - name: Set host availability if OAK_STATUS is not set for {{ inventory_hostname }}
+    - name: Set host availability if OAK_STATUS is not set
       set_fact:
         host_available: true
       when: oak_status.stdout is not defined
 
-    - name: Add {{ inventory_hostname }} to available list
+    - name: Add host to available host list
       set_fact:
         available_hosts: "{{ available_hosts | default([]) + [inventory_hostname] }}"
       when: host_available
       delegate_facts: true
 
-- name: Verify enough hosts are available
+- name: Verify enough hosts are available for topology deployment
   hosts: localhost
   gather_facts: false
   tasks:
@@ -62,7 +66,7 @@
       set_fact:
         available_hosts: "{{ hostvars | dict2items | selectattr('value.host_available', 'defined') | selectattr('value.host_available', 'eq', True) | map(attribute='key') | list }}"
 
-    - name: Available hosts display
+    - name: List available hosts
       debug:
         msg: "Available hosts: {{ available_hosts }}"
 
@@ -70,7 +74,7 @@
       debug:
         msg: "Total VMs: {{ requested_vms }}"
    
-    - name: Set availability boolean condition
+    - name: Set availability flag based on available hosts
       set_fact:
         enough_hosts: "{{ available_hosts | length >= requested_vms | int }}"
 
@@ -83,7 +87,7 @@
       set_fact:
         hosts_to_tag_busy: "{{ available_hosts[:requested_vms | int] | list }}"
 
-    - name: Tag the required number of available hosts as busy
+    - name: Tag the required number of available hosts as busy, setting OAK_STATUS
       when: enough_hosts
       delegate_to: "{{ item }}"
       become: true
@@ -94,9 +98,14 @@
         line: 'OAK_STATUS=busy'
       with_items: "{{ hosts_to_tag_busy }}"
 
-    - name: Assign reserved_hosts
+    - name: Store reserved_hosts group in stats
       set_fact:
         reserved_hosts: "{{ available_hosts[:requested_vms | int] | list }}"
+
+    - include_tasks: github_results.yml
+      vars:
+        result: "Provision ended successfully, reserved hosts: {{ reserved_hosts }}"
+      when: ( reserved_hosts | length) > 0
 
     - name: Matching deploy strategy with reserved hosts
       set_stats:

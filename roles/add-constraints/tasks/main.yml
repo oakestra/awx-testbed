@@ -1,0 +1,10 @@
+- name: Retrieve hostname of group_workers_full
+  set_fact:
+    hostname: "{{ hostvars[item].ansible_host }}"
+  with_items: "{{ group_workers_full }}"
+  register: hostname_list
+
+- name: Print hostname list
+  debug:
+    msg: "{{ hostname_list.results | map(attribute='ansible_facts.hostname') | list }}"
+

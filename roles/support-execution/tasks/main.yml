@@ -1,0 +1,46 @@
+---
+- name: Create a temporary directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: repo
+  register: temp_repo_dir
+
+- name: Debug repository URL
+  debug:
+    msg: "Repository URL in task file: {{ repo }}"
+
+- name: Clone the repository
+  ansible.builtin.git:
+    repo: "{{ repo }}"
+    dest: "{{ temp_repo_dir.path }}"
+    version: "{{ branch }}"
+    force: yes
+
+- name: List all files in the cloned repository
+  ansible.builtin.find:
+    paths: "{{ temp_repo_dir.path }}"
+    recurse: yes
+  register: files
+
+- name: Set script_args to json
+  set_fact:
+    script_args: "{{ script_args | to_json }}"
+
+- name: Display script_args
+  debug:
+    msg: "script_args is {{ script_args }}"
+
+- name: Run the Python script to validate JSON in the cloned repository
+  ansible.builtin.command:  
+    cmd: >
+      python3 "{{ temp_repo_dir.path }}/{{ script_name }}"
+    stdin: "{{ script_args }}"
+  register: result_output
+
+- name: Set environment variable with validation result
+  ansible.builtin.set_fact:
+    script_result: "{{ result_output.stdout }}"
+
+- name: Display the validation result
+  ansible.builtin.debug:
+    msg: "script_result is {{ script_result }}"

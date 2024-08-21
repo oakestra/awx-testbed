@@ -1,0 +1,47 @@
+- name: Print docker_compose_file
+  ansible.builtin.debug:
+    msg: "{{ docker_compose_file }}"
+
+- name: Read Docker Compose file
+  ansible.builtin.slurp:
+    src: "{{ docker_compose_file }}"
+  register: compose_file
+
+- name: Parse container names from Docker Compose file
+  ansible.builtin.set_fact:
+    containers: >-
+        {{ (compose_file.content | b64decode | from_yaml).services | dict2items | selectattr('value.container_name', 'defined') | map(attribute='value.container_name') | list }}
+
+- name: Debug parsed containers
+  ansible.builtin.debug:
+    msg: "Containers: {{ containers }}"
+
+- name: Generate docker inspect command for each container
+  ansible.builtin.set_fact:
+    container_commands: "{{ containers | map('regex_replace', '(.+)', 'docker inspect --format=\"{{.Name}}: {{.State.Status}}\" \\1') | list }}"
+
+- name: Check the status of each container
+  ansible.builtin.shell: "{{ item }}"
+  loop: "{{ container_commands }}"
+  register: container_status
+  ignore_errors: true
+
+- name: Debug container statuses
+  ansible.builtin.debug:
+    msg: "{{ item.stdout }}"
+  loop: "{{ container_status.results }}"
+
+- name: Check and fail if any container is not running
+  vars:
+    container_statuses: >-
+      {{
+        container_status.results | map(attribute='stdout') | map('regex_findall', '(.*): (.*)') | map('first') | list
+      }}
+  block:
+    - name: Fail if any container is not running
+      ansible.builtin.fail:
+        msg: "Container {{ item[0] }} is not running. Current status: {{ item[1] }}"
+      when: item[1] != "running"
+      loop: "{{ container_statuses }}"
+      loop_control:
+        label: "{{ item[0] }}"

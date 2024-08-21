@@ -1,0 +1,17 @@
+- name: Notify GitHub Action
+  uri:
+    url: "https://api.github.com/repos/{{ GITHUB_USERNAME }}/{{ GITHUB_REPO }}/dispatches"
+    method: POST
+    headers:
+      Accept: "application/vnd.github+json"
+      Authorization: "Bearer {{ GITHUB_API_TOKEN }}"
+      X-GitHub-Api-Version: "2022-11-28"
+    body:
+      event_type: "api_call"
+      client_payload:
+        output: "AWX Testbed Output"
+        integration: true
+        result: "{{ result }}"
+    body_format: json
+    status_code: [204]
+  delegate_to: localhost

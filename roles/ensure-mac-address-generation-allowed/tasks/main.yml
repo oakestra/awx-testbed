@@ -1,0 +1,41 @@
+- name: Check if /etc/docker/daemon.json exists
+  stat:
+    path: /etc/docker/daemon.json
+  register: daemon_json_stat
+
+- name: Read the content of /etc/docker/daemon.json
+  when: daemon_json_stat.stat.exists
+  slurp:
+    path: /etc/docker/daemon.json
+  register: daemon_json_content
+
+- name: Parse the JSON content of /etc/docker/daemon.json
+  when: daemon_json_stat.stat.exists
+  set_fact:
+    daemon_json: "{{ daemon_json_content.content | b64decode | from_json }}"
+
+- name: Append iptables true to /etc/docker/daemon.json if not present
+  when: daemon_json_stat.stat.exists and not daemon_json.get('iptables') or daemon_json['iptables'] != true
+  block:
+    - name: Update JSON content to include iptables true
+      set_fact:
+        new_daemon_json: "{{ daemon_json | combine({'iptables': true}, recursive=True) }}"
+    - name: Write updated JSON content to /etc/docker/daemon.json
+      copy:
+        content: "{{ new_daemon_json | to_nice_json }}"
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+
+- name: Create /etc/docker/daemon.json with content if it does not exist
+  when: not daemon_json_stat.stat.exists
+  copy:
+    content: '{ "iptables": true }'
+    dest: /etc/docker/daemon.json
+    mode: '0644'
+
+- name: Restart Docker
+  service:
+    name: docker
+    state: restarted
+  become: true
+  when: not daemon_json_stat.stat.exists and not daemon_json.get('iptables') or daemon_json['iptables'] != true

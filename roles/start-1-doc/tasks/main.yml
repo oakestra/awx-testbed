@@ -6,6 +6,6 @@
   environment:
     CLUSTER_NAME: '{{ clusterName }}'
     CLUSTER_LOCATION: '{{ clusterLocation }}'
-    SYSTEM_MANAGER_URL: '{{ rootIP }}'  
-  shell: "cd {{ oak_repo_path }}/run-a-cluster && nohup docker compose -f 1-DOC.yaml {{ additionalComposeOverrides }} up --detach"
+    SYSTEM_MANAGER_URL: '{{ rootIP }}'
+  shell: "cd {{ oak_repo_path }}/run-a-cluster && nohup sudo -E docker compose -f 1-DOC.yaml up --detach" #{{ additionalComposeOverrides }}
   become: True

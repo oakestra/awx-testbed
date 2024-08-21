@@ -1,0 +1,76 @@
+---
+- name: (1DOC Topology) - Retrieve hostnames of workers
+  hosts: "{{ group_1doc }}"
+  gather_facts: false
+  tasks:
+    - name: Retrieve hostname for {{ inventory_hostname }}
+      shell: |
+        hostname
+      register: local_hostname
+
+    - name: Add {{ inventory_hostname }} to hostname list
+      set_fact:
+        hostname_list: "{{ local_hostname.stdout }}"
+      delegate_facts: true
+
+- name: (1DOC Topology) - App Deploy
+  hosts: localhost
+  roles:
+    - role: topology-app-deploy
+      vars:
+        local_hostname: "{{ local_hostname }}"
+        group_root: "{{ group_1doc }}"
+        group_clusters: "{{ group_1doc }}"
+        topology_desc: "{{ topology_desc }}"
+      when: deploy_1doc and not together_root_cluster
+
+- name: (MDNC Topology) - Retrieve hostnames of workers
+  hosts: "{{ group_workers_full}}"
+  gather_facts: false
+  tasks:
+    - name: Retrieve hostname for {{ inventory_hostname }}
+      shell: |
+        hostname
+      register: local_hostname
+
+    - name: Add {{ inventory_hostname }} to hostname list
+      set_fact:
+        hostname_list: "{{ local_hostname.stdout }}"
+      delegate_facts: true
+
+- name: (MDNC Topology) - App Deploy
+  hosts: localhost
+  roles:
+    - role: topology-app-deploy
+      vars:
+        local_hostname: "{{ local_hostname }}"
+        group_root: "{{ group_root_full}}"
+        group_clusters: "{{ group_clusters_full }}"
+        topology_desc: "{{ topology_desc }}"
+      when: not deploy_1doc and not together_root_cluster
+
+
+- name: (M-DOC) - Retrieve hostnames of workers
+  hosts: "{{ group_rc_workers }}"
+  gather_facts: true
+  tasks:
+    - name: Retrieve hostname for {{ inventory_hostname }}
+      shell: |
+        hostname
+      register: local_hostname
+
+    - name: Add {{ inventory_hostname }} to hostname list
+      set_fact:
+        hostname_list: "{{ local_hostname.stdout }}"
+      delegate_facts: true
+
+- name: (M-DOC) - App Deploy
+  hosts: localhost
+  roles:
+    - role: topology-app-deploy
+      vars:
+        local_hostname: "{{ local_hostname }}"
+        group_root: "{{ group_rc_together }}"
+        group_clusters: "{{ group_rc_together }}"
+        topology_desc: "{{ topology_desc }}"
+      when: not deploy_1doc and together_root_cluster

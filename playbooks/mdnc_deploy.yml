@@ -1,0 +1,266 @@
+- name: Execute Full Deploy template
+  hosts: localhost
+  gather_facts: false
+  vars:
+    repo: "https://github.com/TheDarkPyotr/ansible-tests"
+    branch: "main"
+  tasks:
+    - name: Show groups division
+      debug:
+        msg: |
+          group_root_full: {{ group_root_full }}
+          group_clusters_full: {{ group_clusters_full }}
+          group_workers_full: {{ group_workers_full }}
+
+    - name: Check flag for full deployment
+      fail:
+        msg: "Deployment is skipped because deploy_1doc is true."
+      when: deploy_1doc or together_root_cluster
+
+    - name: Parsed topology descriptor
+      debug:
+        msg: "{{ topology_desc }}"
+
+    - name: Set JSON string for combination script
+      set_fact:
+        json_input: "{{ {'topology_descriptor': topology_desc, 'group_clusters_full': group_clusters_full, 'group_workers_full': group_workers_full } | to_json }}"
+
+    - include_role:
+        name: support-execution
+      vars:
+        script_name: "/utils/mdnc_deploy/combination.py"
+        script_args: "{{ json_input }}"
+
+    - name: Set topology_desc as JSON
+      set_fact:
+        topology_desc: "{{ topology_desc | to_json }}"
+
+    - name: Set facts for cluster and worker associations
+      set_fact:
+        clusters: "{{ topology_desc.topology_descriptor.cluster_list }}"
+
+    - name: Set cluster IDs
+      set_fact:
+        cluster_ids: "{{ topology_desc.topology_descriptor.cluster_list | map(attribute='cluster_number') | list }}"
+
+    - name: Cast num_clusters to an integer
+      set_fact:
+        num_clusters_int: "{{ num_clusters | int }}"
+
+    - name: Set cluster host ranges
+      set_fact:
+        cluster_host_ranges: >
+          {{ dict(cluster_ids | zip(reserved_hosts[1:(1 | int + (num_clusters_int | int))]) | list) }}
+      register: cluster_host_ranges
+
+    - name: Set worker map
+      set_fact:
+        worker_map: "{{ hostvars['localhost'].script_result }}"
+      register: worker_map
+
+    - name: Set cluster map
+      set_fact:
+        cluster_map: "{{ cluster_host_ranges.ansible_facts.cluster_host_ranges }}"
+      register: cluster_map
+
+    - name: Print the cluster and worker associations
+      debug:
+        msg: |
+          Cluster Host Map: {{ cluster_host_ranges.ansible_facts.cluster_host_ranges }}
+          Worker Map: {{ worker_map }}
+
+
+################################################## DEPLOY: ROOT ##################################################
+- name: Deploy root component for full topology
+  hosts: "{{ group_root_full }}"
+  vars:
+    repo: "{{ oak_repo_link }}"
+    path: "{{ oak_repo_path }}"
+    branch: "{{ oak_repo_version }}"
+
+  tasks:
+    - name: Set OAK_ROLE environment variables on root node
+      ansible.builtin.lineinfile:
+        path: /etc/environment
+        regexp: '^OAK_ROLE='
+        line: 'OAK_ROLE=root'
+        create: true
+
+    - name: Set environment variables for deployment root (node {{ inventory_hostname }})
+      set_fact:
+        cluster_map: "{{ hostvars['localhost'].cluster_map.ansible_facts.cluster_map }}"
+        worker_map: "{{ hostvars['localhost'].worker_map.ansible_facts.worker_map }}"
+
+    - name: Print the cluster and worker IPs at root 
+      debug:
+        msg: |
+          Cluster IPs: "{{ cluster_map }}"
+          Worker IPs: "{{ worker_map }}"
+
+    - name: Include role to ensure cloned repo
+      include_role:
+        name: ensure-oakestra-repo-is-cloned
+      vars:
+        path: "{{ oak_repo_path }}"
+        repo: "{{ oak_repo_link }}"
+        branch: "{{ oak_repo_version }}"
+
+    - name: Retrieve rootIP address from hostname
+      set_fact:
+        root_ip: "{{ hostvars[inventory_hostname].ansible_host | default(hostvars[inventory_hostname].ansible_ssh_host, 'IP address not found') }}"
+    
+    - name: Check root ip validity
+      fail:
+        msg: "IP address not found for root node {{ inventory_hostname }}"
+      when: root_ip == "IP address not found"
+
+    - name: Include role to run root component for node {{ inventory_hostname }}
+      include_role:
+        name: run-root
+      vars:
+        rootIP: "{{ root_ip }}"
+
+################################################## DEPLOY: CLUSTER ##################################################
+
+- name: Deploy cluster components for full topology
+  hosts: "{{ group_clusters_full }}"
+
+  tasks:
+    - name: Set OAK_ROLE environment variables on cluster node {{ inventory_hostname }}
+      ansible.builtin.lineinfile:
+        path: /etc/environment
+        regexp: '^OAK_ROLE='
+        line: "OAK_ROLE=cluster_{{ inventory_hostname }}"
+        create: yes
+
+    - name: Set environment variables for deployment cluster
+      set_fact:
+        cluster_map: "{{ hostvars['localhost'].cluster_map.ansible_facts.cluster_map }}"
+        worker_map: "{{ hostvars['localhost'].worker_map.ansible_facts.worker_map }}"
+
+    - name: Print the cluster and worker IPs at cluster
+      debug:
+        msg: |
+          Cluster IPs: "{{ cluster_map }}"
+          Worker IPs: "{{ worker_map }}"
+
+    - name: Retrieve root hostname from group_root_full
+      set_fact:
+        root_name: "{{ group_root_full[0] }}"
+
+    - name: Retrieve root IP address
+      set_fact:
+        root_ip: "{{ hostvars[root_name].ansible_host | default(hostvars[root_name].ansible_ssh_host, 'IP address not found') }}"
+
+    - name: Print root IP address for cluster
+      debug:
+        msg: "Root IP address for cluster {{ inventory_hostname }} is {{ root_ip }}"
+
+    - name: Ensure cloned repo for node {{ inventory_hostname }}
+      include_role:
+        name: ensure-oakestra-repo-is-cloned
+      vars:
+        path: "{{ oak_repo_path }}"
+        repo: "{{ oak_repo_link }}"
+        branch: "{{ oak_repo_version }}"
+
+    - name: Run cluster entrypoint for node {{ inventory_hostname }}
+      include_role:
+        name: run-cluster
+      vars:
+        rootIP: "{{ root_ip }}"
+        clusterName: "CL{{ inventory_hostname }}"
+        clusterLocation: ""
+
+################################################## DEPLOY: WORKER ##################################################
+
+- name: Deploy worker components for full topology
+  hosts: "{{ group_workers_full }}"
+  tasks:
+    - name: Set OAK_ROLE environment variables on worker node {{ inventory_hostname }}
+      ansible.builtin.lineinfile:
+        path: /etc/environment
+        regexp: '^OAK_ROLE='
+        line: "OAK_ROLE=worker_{{ inventory_hostname }}"
+        create: true
+
+    - name: Set environment variables for deployment node (worker {{ inventory_hostname }})
+      set_fact:
+        cluster_map: "{{ hostvars['localhost'].cluster_map.ansible_facts.cluster_map}}"
+        worker_map: "{{ hostvars['localhost'].worker_map.ansible_facts.worker_map }}"
+
+    - name: Show cluster and worker IPs at node
+      debug:
+        msg: |
+          Cluster IPs: "{{ cluster_map }}"
+          Worker IPs: "{{ worker_map }}"
+
+
+    - name: Show cluster_node_map association
+      debug:
+        msg: "{{ cluster_map }}"
+      
+    - name: Determine cluster for current worker and print message
+      debug:
+        msg: >
+          {% set cluster_id = worker_map | dict2items | selectattr('value', 'contains', inventory_hostname) | map(attribute='key') | first %}
+          {% if cluster_id is defined %}
+            {% set cluster_node_name = cluster_map[(cluster_id | int )] %}
+            Hey, I'm host {{ inventory_hostname }} and I'm inside cluster of node {{ cluster_node_name }}
+          {% else %}
+            Cluster information not found for host {{ inventory_hostname }}
+          {% endif %}
+    
+    - name: Set cluster id for worker
+      set_fact:
+        cluster_id: "{{ worker_map | dict2items | selectattr('value', 'contains', inventory_hostname) | map(attribute='key') | first }}"
+
+    - name: Set cluster node name for worker
+      set_fact:
+        cluster_node_name: "{{ cluster_map[(cluster_id | int)] }}"
+
+    - name: Retrieve IP address of cluster node
+      set_fact:
+        cluster_node_ip: "{{ hostvars[cluster_node_name].ansible_host | default(hostvars[cluster_node_name].ansible_ssh_host, 'IP address not found') }}"
+
+    - name: Check if cluster_node_ip is valid
+      fail:
+        msg: "IP address not found for cluster node {{ cluster_node_name }}"
+      when: cluster_node_ip == "IP address not found"
+    
+    - name: Show node-cluster association
+      debug:
+        msg: "Cluster node IP for worker {{ inventory_hostname }} is {{ cluster_node_ip }}"
+
+    - name: Setup network manager entrypoint for node {{ inventory_hostname }}
+      include_role:
+        name: setup-net-manager
+      vars:
+        nodeIP: "{{ cluster_node_ip }}"
+        clusterIP: "{{ cluster_node_ip }}"
+        path: "{{ oak_repo_path }}"
+        repo: "{{ oak_repo_link }}"
+        branch: "{{ oak_repo_version }}"
+
+    - name: Restart Net Manager
+      shell: 'nohup /bin/NetManager -p 6000 </dev/null >/tmp/netmanager.log 2>&1 &'
+      become: true
+      ignore_errors: false
+
+    - name: Setup node engine entrypoint for node {{ inventory_hostname }}
+      include_role:
+        name: setup-node-engine
+      vars:
+        nodeIP: "{{ cluster_node_ip }}"
+        clusterIP: "{{ cluster_node_ip }}"
+        path: "{{ oak_repo_path }}"
+        repo: "{{ oak_repo_link }}"
+        branch: "{{ oak_repo_version }}"
+
+    - name: Run node-engine on node {{ inventory_hostname }}
+      environment:
+        CLUSTER_IP: '{{ cluster_node_ip }}'
+      shell: 'nohup /bin/NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 </dev/null >/tmp/nodeengine.log 2>&1 &'
+      become: true
+      ignore_errors: false
+

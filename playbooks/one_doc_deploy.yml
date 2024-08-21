@@ -1,28 +1,28 @@
-- name: Execute 1DOC template if one_doc_enabled is true
+- name: Deploy 1DOC topology
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Fail if deploy_1doc is false
+    - name: Skip deployment if deploy_1doc is false
       fail:
         msg: "Deployment is skipped because deploy_1doc is false."
       when: not deploy_1doc
 
-  
 
-- name: Deploy components for 1DOC topology
+- name: Deploy components for 1DOC topology host ({{ group_1doc }})
   hosts: "{{ group_1doc }}"
-  gather_facts: false
+  gather_facts: true
   tasks:
-    - name: Retrieve current hostname IP address
+    - name: Retrieve {{ inventory_hostname }} hostname IP address
       set_fact:
         current_ip: "{{ hostvars[inventory_hostname].ansible_host | default(hostvars[inventory_hostname].ansible_ssh_host, 'IP address not found') }}"  
 
-    - name: Check current ip validity
+    - name: Check {{ inventory_hostname }} IP validity
       fail:
         msg: "IP address not found for current node {{ inventory_hostname }}"
       when: current_ip == "IP address not found"
 
-    - name: Entrypoint to ensure cloned repo (node {{ inventory_hostname }})
+
+    - name: Verify Oakestra repo is cloned (node {{ inventory_hostname }})
       include_role:
         name: ensure-oakestra-repo-is-cloned
       vars:
@@ -30,9 +30,8 @@
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
         commit: "{{ commit }}"
-        
       
-    - name: Entrypoint to start 1DOC (node {{ inventory_hostname }})
+    - name: Start 1DOC components (node {{ inventory_hostname }})
       include_role:
         name: start-1-doc
       vars:
@@ -41,11 +40,41 @@
         clusterLocation: ""
         additionalComposeOverrides: "-f override-alpha-versions.yaml"
 
- # roles:
- #   - ensure-oakestra-repo-is-cloned
- #   - start-1-doc
- # vars:
- #   params: "-f run-a-cluster/override-alpha-versions.yaml"
- #   path: "{{ oak_repo_path }}"
- #   repo: "{{ oak_repo_link }}"
- #   branch: "{{ oak_repo_version }}"
+    - name: Set OAK_ROLE environment variables on worker node
+      ansible.builtin.lineinfile:
+        path: /etc/environment
+        regexp: '^OAK_ROLE='
+        line: "OAK_ROLE=worker_{{ inventory_hostname }}"
+        create: yes
+
+    - name: Setup network manager entrypoint for node {{ inventory_hostname }}
+      include_role:
+        name: setup-net-manager
+      vars:
+        nodeIP: "{{ current_ip }}"
+        clusterIP: "{{ current_ip }}"
+        path: "{{ oak_repo_path }}"
+        repo: "{{ oak_repo_link }}"
+        branch: "{{ oak_repo_version }}"
+
+    - name: Run net-manager on node {{ inventory_hostname }}
+      shell: 'nohup sudo /bin/NetManager -p 6000 </dev/null >/tmp/netmanager.log 2>&1 &'
+      become: true
+      ignore_errors: false
+
+    - name: Setup node engine entrypoint for node {{ inventory_hostname }}
+      include_role:
+        name: setup-node-engine
+      vars:
+        nodeIP: "{{ cluster_node_ip }}"
+        clusterIP: "{{ cluster_node_ip }}"
+        path: "{{ oak_repo_path }}"
+        repo: "{{ oak_repo_link }}"
+        branch: "{{ oak_repo_version }}"
+
+    - name: Run node-engine on node {{ inventory_hostname }}
+      environment:
+        CLUSTER_IP: '{{ current_ip }}'
+      shell: 'nohup sudo /bin/NodeEngine -n 6000 -p 10100 </dev/null >/tmp/nodeengine.log 2>&1 &'
+      become: true
+      ignore_errors: false
