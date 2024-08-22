@@ -28,26 +28,12 @@ jobs:
         id: read_topology
         run: |
           cat ${{ github.event.inputs.topology }} 
-      - name: Get the token
-        id: get_token
-        env:
-          TOWER_USER: ${{ secrets.TOWER_USER }}
-          TOWER_PASS: ${{ secrets.TOWER_PASS }}
-          TOWER_HOST: ${{ secrets.TOWER_HOST }}
-        run: |
-          response=$(curl -s -X POST "http://$TOWER_HOST/api/v2/users/1/personal_tokens/" \
-            -u "$TOWER_USER:$TOWER_PASS" \
-            -H "Content-Type: application/json" \
-            --insecure)  # --insecure is equivalent to validate_certs: false in Ansible
-          echo "$response" | jq .
-          token=$(echo "$response" | jq -r '.token')
-          echo "TOWER_API_TOKEN=$token" >> $GITHUB_ENV
 
-      - name: Use the token
+      - name: Trigger Testbed Pipeline Execution
         env:
           TOWER_HOST: ${{ secrets.TOWER_HOST }}
           TEMPLATE_ID: ${{ secrets.TEMPLATE_ID }}
-          TOWER_API_TOKEN: ${{ env.TOWER_API_TOKEN }}
+          TOWER_API_TOKEN: ${{ secrets.TOWER_TOKEN }}
           BRANCH: ${{ github.event.inputs.branch }}
           COMMIT: ${{ github.event.inputs.commit }}
           FILENAME: ${{ github.event.inputs.topology }}
@@ -57,7 +43,7 @@ jobs:
           echo "$extra_vars_data"
         
           response=$(curl -s -X POST "http://$TOWER_HOST/api/v2/workflow_job_templates/$TEMPLATE_ID/launch/" \
-            -H "Authorization: Bearer $TOWER_API_TOKEN" \
+            -H "Authorization: Bearer $TOWER_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{ \"extra_vars\": $extra_vars_data }" \
             --insecure)  # --insecure is equivalent to validate_certs: false in Ansible
