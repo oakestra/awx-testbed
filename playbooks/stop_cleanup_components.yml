@@ -99,14 +99,14 @@
   tasks:
     - name: (MDOC) Set cluster_components_path for cluster services
       set_fact:
-        cluster_omponents_path: "/cluster_orchestrator/docker-compose.yml"
+        cluster_components_path: "/cluster_orchestrator/docker-compose.yml"
 
     - name: (MDOC) Debug oak_repo_path and components_path
       debug:
-        msg: "oak_repo_path: {{ oak_repo_path }}, components_path: {{ components_path }}"
+        msg: "oak_repo_path: {{ oak_repo_path }}, components_path: {{ cluster_components_path }}"
 
     - name: (MDOC) Kill cluster processes on node {{ inventory_hostname }}
-      command: "docker compose -f {{ oak_repo_path }}{{ cluster_omponents_path }}  kill"
+      command: "docker compose -f {{ oak_repo_path }}{{ cluster_components_path }}  kill"
       become: True
       ignore_errors: true
 
@@ -119,7 +119,7 @@
         msg: "oak_repo_path: {{ oak_repo_path }}, components_path: {{ root_components_path }}"
 
     - name: (MDOC) Kill root processes on node {{ inventory_hostname }}
-      command: "docker compose -f {{ oak_repo_path }}{{ cluster_omponents_path }}  kill"
+      command: "docker compose -f {{ oak_repo_path }}{{ cluster_components_path }}  kill"
       become: True
       ignore_errors: true
 
