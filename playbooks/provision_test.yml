@@ -13,16 +13,16 @@
     - name: Compute required number of hosts based on topology
       set_fact:
         num_clusters: "{{ topology.topology_descriptor.cluster_list | length }}"
-        num_nodes: "{{ topology.topology_descriptor.cluster_list | map(attribute='number_of_nodes') | sum }}"
-        one_doc_enabled: "{{ topology.topology_descriptor.one_doc_enabled | bool }}"
-        together_root_cluster: "{{ topology.topology_descriptor.together_root_cluster | bool }}"
+        num_nodes: "{{ topology.topology_descriptor.cluster_list | map(attribute='workers_number') | sum }}"
+        onedoc: "{{ topology.topology_descriptor.onedoc | bool }}"
+        mdoc: "{{ topology.topology_descriptor.mdoc | bool }}"
 
-    - name: Compute requested_vms based on one_doc_enabled and together_root_cluster flags
+    - name: Compute requested_vms based on onedoc and mdoc flags
       set_fact:
         requested_vms: >-
-          {%- if one_doc_enabled -%}
+          {%- if onedoc -%}
           1
-          {%- elif together_root_cluster -%}
+          {%- elif mdoc -%}
           {{ (1 | int) + (num_nodes | int) }}
           {%- else -%}
           {{ (1 | int) + (num_clusters | int) + (num_nodes | int) }}
@@ -42,9 +42,14 @@
         echo $OAK_STATUS
       register: oak_status
 
+    - name: Debug hosts status
+      debug:
+        msg: "Host {{ inventory_hostname }} status {{ oak_status.stdout }}"
+      when: oak_status.stdout is defined
+
     - name: Set host availability if not busy 
       set_fact:
-        host_available: "{{ oak_status.stdout != 'busy' }}"
+        host_available: "{{ oak_status.stdout == 'free' }}"
       when: oak_status.stdout is defined
 
     - name: Set host availability if OAK_STATUS is not set
@@ -66,6 +71,10 @@
       set_fact:
         available_hosts: "{{ hostvars | dict2items | selectattr('value.host_available', 'defined') | selectattr('value.host_available', 'eq', True) | map(attribute='key') | list }}"
 
+    - name: Remove localhost from available hosts
+      set_fact:
+        available_hosts: "{{ available_hosts | difference(['localhost']) }}"
+
     - name: List available hosts
       debug:
         msg: "Available hosts: {{ available_hosts }}"
@@ -73,7 +82,7 @@
     - name: Requested VMs display
       debug:
         msg: "Total VMs: {{ requested_vms }}"
-   
+
     - name: Set availability flag based on available hosts
       set_fact:
         enough_hosts: "{{ available_hosts | length >= requested_vms | int }}"
@@ -102,16 +111,11 @@
       set_fact:
         reserved_hosts: "{{ available_hosts[:requested_vms | int] | list }}"
 
-    - include_tasks: github_results.yml
-      vars:
-        result: "Provision ended successfully, reserved hosts: {{ reserved_hosts }}"
-      when: ( reserved_hosts | length) > 0
-
     - name: Matching deploy strategy with reserved hosts
       set_stats:
         data:
-          deploy_1doc: "{{ one_doc_enabled }}"
-          together_root_cluster: "{{ together_root_cluster }}"
+          onedoc: "{{ onedoc }}"
+          mdoc: "{{ mdoc }}"
           num_clusters: "{{ num_clusters }}"
           num_nodes: "{{ num_nodes }}"
           topology_desc: "{{ topology_desc }}"
@@ -121,9 +125,9 @@
     - name: Assign hosts to groups based on the conditions
       set_stats:
         data:
-          group_1doc: "{{ reserved_hosts[:1] if one_doc_enabled else [] }}"
-          group_rc_together: "{{ reserved_hosts[:1] if not one_doc_enabled and together_root_cluster else [] }}"
-          group_rc_workers: "{{ reserved_hosts[1:] if not one_doc_enabled and together_root_cluster else [] }}"
-          group_root_full: "{{ reserved_hosts[:1] if not one_doc_enabled and not together_root_cluster else [] }}"
-          group_clusters_full: "{{ reserved_hosts[1:(1 + (num_clusters | int))] if not one_doc_enabled and not together_root_cluster else [] }}"
-          group_workers_full: "{{ reserved_hosts[(1 + (num_clusters | int)):(1 + (num_clusters | int) + (num_nodes | int))] if not one_doc_enabled and not together_root_cluster else [] }}"
+          group_1doc: "{{ reserved_hosts[:1] if onedoc else [] }}"
+          group_rc_together: "{{ reserved_hosts[:1] if not onedoc and mdoc else [] }}"
+          group_rc_workers: "{{ reserved_hosts[1:] if not onedoc and mdoc else [] }}"
+          group_root_full: "{{ reserved_hosts[:1] if not onedoc and not mdoc else [] }}"
+          group_clusters_full: "{{ reserved_hosts[1:(1 + (num_clusters | int))] if not onedoc and not mdoc else [] }}"
+          group_workers_full: "{{ reserved_hosts[(1 + (num_clusters | int)):(1 + (num_clusters | int) + (num_nodes | int))] if not onedoc and not mdoc else [] }}"

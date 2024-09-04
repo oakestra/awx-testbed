@@ -1,3 +1,5 @@
 aiohttp==4.0.0a0
 icmplib==2.1.1
 asyncio==3.4.3
+requests
+

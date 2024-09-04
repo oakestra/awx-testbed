@@ -1,17 +1,14 @@
 ---
 - name: 1. Topology Validator Phase
   hosts: localhost
-  vars:
-    testbed_repo: "https://github.com/TheDarkPyotr/ansible-tests"
-    testbed_repo_branch: "main"
-
   gather_facts: false
 
   tasks:
     - name: Create a temporary directory for testbed files
       ansible.builtin.tempfile:
         state: directory
-        suffix: _testbed_repo
+        suffix: testbed
+        path: /tmp/
       register: temp_repo_dir
 
     - name: Clone the testbed repository
@@ -23,7 +20,7 @@
 
     - name: Checkout the specific commit
       ansible.builtin.command:
-        cmd: git checkout HEAD
+        cmd: git checkout {{ testbed_repo_branch }}
         chdir: "{{ temp_repo_dir.path }}"
       register: git_checkout
 
@@ -31,7 +28,7 @@
       ansible.builtin.assert:
         that:
           - git_checkout.rc == 0
-        fail_msg: "Failed to checkout commit {{ commit }}"
+        fail_msg: "Failed to checkout commit {{ testbed_repo_branch }}"
 
     - name: Register testbed repository files
       ansible.builtin.find:
@@ -70,11 +67,6 @@
       ansible.builtin.set_fact:
         TOPOLOGY_VALIDITY: "{{ validation_result.stdout }}"
 
-    - include_tasks: github_results.yml
-      vars:
-        result: "Topology description {{ topology_descriptor }} vadalition returned {{ TOPOLOGY_VALIDITY | bool}}"
-        parameters: "{{ topology_descriptor_content | to_json}}"
-
     - name: Stop execution if topology descriptor is invalid
       fail:
         msg: "Topology descriptor {{ topology_descriptor }} is not valid"
@@ -86,3 +78,4 @@
           topology_desc: "{{ topology_descriptor_content | to_json}}"
           topology_validity: "{{ TOPOLOGY_VALIDITY | bool}}"
           oak_repo_commit: "{{ commit }}"
+          testbed_tmp_path: "{{ temp_repo_dir.path }}"

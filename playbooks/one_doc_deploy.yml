@@ -1,13 +1,3 @@
-- name: Deploy 1DOC topology
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Skip deployment if deploy_1doc is false
-      fail:
-        msg: "Deployment is skipped because deploy_1doc is false."
-      when: not deploy_1doc
-
-
 - name: Deploy components for 1DOC topology host ({{ group_1doc }})
   hosts: "{{ group_1doc }}"
   gather_facts: true

@@ -4,15 +4,41 @@
     path: "{{ path }}"
     state: directory
 
-- name: Ensure {{ repo }} Repo is cloned
+- name: Clone repository if not already present
   ansible.builtin.git:
     repo: "{{ repo }}"
     dest: "{{ path }}"
     version: "{{ branch }}"
+    update: false  # Do not update if it already exists
+
+- name: Check if {{ commit }} exists on branch {{ branch }}
+  ansible.builtin.command:
+    cmd: git cat-file -t "{{ commit }}"
+  args:
+    chdir: "{{ path }}"
+  register: commit_check
+  ignore_errors: true  # Ignore errors if the commit doesn't exist
+
+- name: Set git_version to {{ commit }} if valid, otherwise to {{ branch }}
+  set_fact:
+    git_version: "{{ commit }}"
+  when: commit_check.rc == 0
+
+- name: Set git_version to {{ branch }} if commit is not valid
+  set_fact:
+    git_version: "{{ branch }}"
+  when: commit_check.rc != 0
+
+- name: Ensure repository is at the correct state (commit or branch)
+  ansible.builtin.git:
+    repo: "{{ repo }}"
+    dest: "{{ path }}"
+    version: "{{ git_version }}"
     force: true
 
 - name: Fetch all tags from remote
-  ansible.builtin.command: git fetch --tags --force
+  ansible.builtin.command:
+    cmd: git fetch --tags --force
   become: true
   args:
     chdir: "{{ path }}"

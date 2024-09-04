@@ -1,74 +1,71 @@
 - name: Execute Full Deploy template
   hosts: localhost
   gather_facts: false
-  vars:
-    repo: "https://github.com/TheDarkPyotr/ansible-tests"
-    branch: "main"
   tasks:
-    - name: Show groups division
-      debug:
-        msg: |
-          group_root_full: {{ group_root_full }}
-          group_clusters_full: {{ group_clusters_full }}
-          group_workers_full: {{ group_workers_full }}
+    - name: Check MNDC Deploy flags
+      block:
+        - name: Show groups division
+          debug:
+            msg: |
+              Root hosts: {{ group_root_full }}
+              Cluster hosts: {{ group_clusters_full }}
+              Workers hosts: {{ group_workers_full }}
 
-    - name: Check flag for full deployment
-      fail:
-        msg: "Deployment is skipped because deploy_1doc is true."
-      when: deploy_1doc or together_root_cluster
+        - name: Parsed topology descriptor
+          debug:
+            msg: "{{ topology_desc }}"
 
-    - name: Parsed topology descriptor
-      debug:
-        msg: "{{ topology_desc }}"
+        - name: Execute the support Script
+          command: >
+            /usr/bin/python3 "{{ testbed_tmp_path }}"/utils/mdnc_deploy/combination.py "{{ testbed_tmp_path }}/topologies/{{ topology_descriptor }}" "{{ group_clusters_full }}" "{{ group_workers_full }}"
+          register: result_output
 
-    - name: Set JSON string for combination script
-      set_fact:
-        json_input: "{{ {'topology_descriptor': topology_desc, 'group_clusters_full': group_clusters_full, 'group_workers_full': group_workers_full } | to_json }}"
+        - name: Set dictionary result output
+          ansible.builtin.set_fact:
+            script_result: "{{ result_output.stdout }}"
 
-    - include_role:
-        name: support-execution
-      vars:
-        script_name: "/utils/mdnc_deploy/combination.py"
-        script_args: "{{ json_input }}"
+        - name: Debug the script result
+          debug:
+            msg: "script_result is {{ script_result }}"
 
-    - name: Set topology_desc as JSON
-      set_fact:
-        topology_desc: "{{ topology_desc | to_json }}"
+        - name: Set topology_desc as JSON
+          set_fact:
+            topology_desc: "{{ topology_desc | to_json }}"
 
-    - name: Set facts for cluster and worker associations
-      set_fact:
-        clusters: "{{ topology_desc.topology_descriptor.cluster_list }}"
+        - name: Set facts for cluster and worker associations
+          set_fact:
+            clusters: "{{ topology_desc.topology_descriptor.cluster_list }}"
 
-    - name: Set cluster IDs
-      set_fact:
-        cluster_ids: "{{ topology_desc.topology_descriptor.cluster_list | map(attribute='cluster_number') | list }}"
+        - name: Set cluster IDs
+          set_fact:
+            cluster_ids: "{{ topology_desc.topology_descriptor.cluster_list | map(attribute='cluster_number') | list }}"
 
-    - name: Cast num_clusters to an integer
-      set_fact:
-        num_clusters_int: "{{ num_clusters | int }}"
+        - name: Cast num_clusters to an integer
+          set_fact:
+            num_clusters_int: "{{ num_clusters | int }}"
 
-    - name: Set cluster host ranges
-      set_fact:
-        cluster_host_ranges: >
-          {{ dict(cluster_ids | zip(reserved_hosts[1:(1 | int + (num_clusters_int | int))]) | list) }}
-      register: cluster_host_ranges
+        - name: Set cluster host ranges
+          set_fact:
+            cluster_host_ranges: >
+              {{ dict(cluster_ids | zip(reserved_hosts[1:(1 | int + (num_clusters_int | int))]) | list) }}
+          register: cluster_host_ranges
 
-    - name: Set worker map
-      set_fact:
-        worker_map: "{{ hostvars['localhost'].script_result }}"
-      register: worker_map
+        - name: Set worker map
+          set_fact:
+            worker_map: "{{ hostvars['localhost'].script_result }}"
+          register: worker_map
 
-    - name: Set cluster map
-      set_fact:
-        cluster_map: "{{ cluster_host_ranges.ansible_facts.cluster_host_ranges }}"
-      register: cluster_map
+        - name: Set cluster map
+          set_fact:
+            cluster_map: "{{ cluster_host_ranges.ansible_facts.cluster_host_ranges }}"
+          register: cluster_map
 
-    - name: Print the cluster and worker associations
-      debug:
-        msg: |
-          Cluster Host Map: {{ cluster_host_ranges.ansible_facts.cluster_host_ranges }}
-          Worker Map: {{ worker_map }}
-
+        - name: Print the cluster and worker associations
+          debug:
+            msg: |
+              Cluster Host Map: {{ cluster_host_ranges.ansible_facts.cluster_host_ranges }}
+              Worker Map: {{ worker_map }}
+      when: not onedoc and not mdoc
 
 ################################################## DEPLOY: ROOT ##################################################
 - name: Deploy root component for full topology

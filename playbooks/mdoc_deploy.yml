@@ -1,13 +1,4 @@
-- name: Execute Root+Cluster Deploy template if one_doc_enabled is true
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Fail if together_root_cluster is false
-      fail:
-        msg: "Deployment is skipped because together_root_cluster is false."
-      when: not together_root_cluster
-
-- name: Deploy components for Root+Cluster topology
+- name: Deploy root and cluster components for MDOC topology
   hosts: "{{ group_rc_together }}"
   gather_facts: false
   vars:

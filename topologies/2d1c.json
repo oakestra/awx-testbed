@@ -1,10 +1,10 @@
 {
     "topology_descriptor": {
-    "one_doc_enabled": false, 
-    "together_root_cluster": false,
+    "onedoc": false, 
+    "mdoc": false,
     "cluster_list": [{
       "cluster_number": 1,
-      "number_of_nodes": 2,
+      "workers_number": 2,
       "sla_descriptor": {
             "sla_version" : "v2.0",
             "customerID" : "Admin",
@@ -21,6 +21,7 @@
                       "microservice_namespace": "test2",
                       "virtualization": "container",
                       "cmd": ["sh", "-c", "while true; do echo 'Service 1 running'; sleep 60; done"],
+                      "expected_output": "Service 1 running",
                       "memory": 1,
                       "vcpus": 0,
                       "vgpus": 0,
@@ -39,6 +40,7 @@
                       "microservice_namespace": "test2",
                       "virtualization": "container",
                       "cmd": ["sh", "-c", "while true; do echo 'Service 2 running'; sleep 60; done"],
+                      "expected_output": "Service 2 running",
                       "memory": 1,
                       "vcpus": 0,
                       "vgpus": 0,
@@ -65,6 +67,7 @@
                       "microservice_namespace": "test2",
                       "virtualization": "container",
                       "cmd": ["sh", "-c", "while true; do echo 'Service 1 running'; sleep 60; done"],
+                      "expected_output": "Service 1 running",
                       "memory": 1,
                       "vcpus": 0,
                       "vgpus": 0,
@@ -83,6 +86,7 @@
                       "microservice_namespace": "test2",
                       "virtualization": "container",
                       "cmd": ["sh", "-c", "while true; do echo 'Service 2 running'; sleep 60; done"],
+                      "expected_output": "Service 2 running",
                       "memory": 1,
                       "vcpus": 0,
                       "vgpus": 0,
