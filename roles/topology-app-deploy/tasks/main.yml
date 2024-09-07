@@ -90,13 +90,11 @@
 - name: Check if processes are running on the remote hosts and display expected outputs
   shell: |
     #!/bin/bash
-    # Create a mapping of process names to expected outputs
     declare -A process_outputs
     {% for process, expected_output in item.value.items() %}
-    process_outputs["{{ process | quote }}"]="{{ expected_output | quote }}"
+    process_outputs["{{ process | quote }}"]=" {{ expected_output | quote }}"
     {% endfor %}
-    
-    # Check each process
+ 
     for process in "${!process_outputs[@]}"; do
       if pgrep -f "$process" > /dev/null; then
         echo "Process $process is running - Expected Output: ${process_outputs[$process]}"
@@ -106,10 +104,13 @@
       fi
     done
     echo "All processes are running"
+  args:
+    executable: /bin/bash
   delegate_to: "{{ ip_to_hostname[item.key] }}"
   loop: "{{ process_status_dict['running_processes'] | dict2items }}"
   register: process_check_results
   ignore_errors: false
+
 
 
 - name: Print the output of the process check task
