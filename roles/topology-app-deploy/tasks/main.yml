@@ -99,8 +99,9 @@
       if pgrep -f "$process" > /dev/null; then
         file_path="/tmp/${process// /_}"
         if [ -f "$file_path" ]; then
-         actual_output=$(cat "$file_path")
-          if echo "$actual_output" | grep -q "${process_outputs[$process]}"; then
+          actual_output=$(cat "$file_path" | tr -d '[:space:]' | tr -d "'")
+          expected_output=$(echo "${process_outputs[$process]}" | tr -d '[:space:]' | tr -d "'")
+          if echo "$actual_output" | grep -q "$expected_output"; then
             echo "Process $process is running - Expected Output: ${process_outputs[$process]}"
           else
             echo "Process $process is running, but file content does not match expected output"
