@@ -89,7 +89,7 @@
 
 - name: Check if processes are running on the remote hosts
   shell: |
-    for process in {{ item.value }}; do
+    for process in {{ item.value | map('quote') | join(' ') }}; do
       if ! pgrep -f "$process"; then
         echo "Process $process not running"
         exit 1
