@@ -127,7 +127,8 @@
   ignore_errors: false
 
 
-- name: Print the output of the process check task
-  debug:
+- debug:
     msg: "{{ item.stdout_lines }}"
   loop: "{{ process_check_results.results }}"
+  loop_control:
+    label: 'process_check_results'
