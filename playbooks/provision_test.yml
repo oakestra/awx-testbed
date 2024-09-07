@@ -37,27 +37,29 @@
   hosts: all
   gather_facts: false
   tasks:
-    - name: Check OAK_STATUS for each inventory host
+    - name: Check if OAK_STATUS is set to 'free' in /etc/environment for each inventory host
       shell: |
-        echo $OAK_STATUS
-      register: oak_status
+        grep -q '^OAK_STATUS=free' /etc/environment
+      register: oak_status_check
+      changed_when: false
+      failed_when: oak_status_check.rc != 0 and oak_status_check.rc != 1
 
-    - name: Debug hosts status
+    - name: Debug host OAK_STATUS check result
       debug:
-        msg: "Host {{ inventory_hostname }} status {{ oak_status.stdout }}"
-      when: oak_status.stdout is defined
+        msg: "Host {{ inventory_hostname }} OAK_STATUS is set to 'free'"
+      when: oak_status_check.rc == 0
 
-    - name: Set host availability if not busy 
-      set_fact:
-        host_available: "{{ oak_status.stdout == 'free' }}"
-      when: oak_status.stdout is defined
-
-    - name: Set host availability if OAK_STATUS is not set
+    - name: Set host availability if OAK_STATUS is 'free'
       set_fact:
         host_available: true
-      when: oak_status.stdout is not defined
+      when: oak_status_check.rc == 0
 
-    - name: Add host to available host list
+    - name: Set host availability if OAK_STATUS is not set to 'free'
+      set_fact:
+        host_available: false
+      when: oak_status_check.rc == 1
+
+    - name: Add host to available host list if OAK_STATUS is 'free'
       set_fact:
         available_hosts: "{{ available_hosts | default([]) + [inventory_hostname] }}"
       when: host_available
