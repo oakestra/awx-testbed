@@ -111,6 +111,7 @@
   register: process_check_results
   ignore_errors: false
 
+
 - name: Print the output of the process check task
   debug:
     msg: "{{ item.stdout }}"
