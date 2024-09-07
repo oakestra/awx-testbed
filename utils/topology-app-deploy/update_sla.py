@@ -297,7 +297,7 @@ async def application_healthcheck(deployed_apps, worker_list, SYSTEM_MANAGER_URL
                             if instance.get("status") == "RUNNING":
 
                                 host = instance.get("publicip")
-                                if running_statuses[host]:
+                                if host in running_statuses:
                                     running_statuses[host].append(process)
                                 else:
                                     running_statuses[host] = [process]
