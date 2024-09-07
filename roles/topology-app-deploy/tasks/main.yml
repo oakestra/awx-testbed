@@ -87,11 +87,21 @@
   debug:
     msg: "{{ ip_to_hostname }}"
 
-- name: Check if processes are running on the remote hosts
+- name: Check if processes are running on the remote hosts and display expected outputs
   shell: |
-    for process in {{ item.value | map('quote') | join(' ') }}; do
-      if ! pgrep -f "$process"; then
-        echo "Process $process not running"
+    #!/bin/bash
+    # Create a mapping of process names to expected outputs
+    declare -A process_outputs
+    {% for process, expected_output in item.value.items() %}
+    process_outputs["{{ process | quote }}"]="{{ expected_output | quote }}"
+    {% endfor %}
+    
+    # Check each process
+    for process in "${!process_outputs[@]}"; do
+      if pgrep -f "$process" > /dev/null; then
+        echo "Process $process is running - Expected Output: ${process_outputs[$process]}"
+      else
+        echo "Process $process is not running - Expected Output: ${process_outputs[$process]}"
         exit 1
       fi
     done

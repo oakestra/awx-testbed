@@ -1,3 +1,4 @@
+import bisect
 import sys
 import json
 import ast
@@ -175,9 +176,9 @@ def update_topology(clusters, workers, cluster_names, deploy_mode):
                                 "cluster": "CL" + cluster_suffix,
                             }
                         ]
-
-    with open("/tmp/log_verifier.json", "w") as f:
-        json.dump(log_verifier, f, indent=4)
+    return log_verifier
+    # with open("/tmp/log_verifier.json", "w") as f:
+    #    json.dump(log_verifier, f, indent=4)
 
 
 def check_correspondence(json_data, workers, cluster_names, deploy_mode):
@@ -189,8 +190,8 @@ def check_correspondence(json_data, workers, cluster_names, deploy_mode):
         print("Insufficient worker nodes.")
         return False
 
-    update_topology(clusters, workers, cluster_names, deploy_mode)
-    return json_data
+    expected_app_output = update_topology(clusters, workers, cluster_names, deploy_mode)
+    return json_data, expected_app_output
 
 
 async def deploy_application(updated_sla: dict):
@@ -257,8 +258,14 @@ def check_list(param_str: str):
 
 {
     "running_processes": {
-        "192.168.1.2": ["newapp.test2.service1.test1","newapp.test2.service2.test2.instance.0"],
-        "192.168.1.3": ["clientsrvr1.test1.curl.test1","clientsrvr1.test1.nginx.test1"]
+        "192.168.1.2": {
+                    "newapp.test2.service1.test1": "Service 1 is running"
+                    "newapp.test2.service2.test2.instance.0": "Service 2 is running",
+                    },
+        "192.168.1.3": {
+                    "clientsrvr1.test1.curl.test1": "HTTP 404",
+                    "clientsrvr1.test1.nginx.test1". "HTTP 303",
+                        }
     },
     "failed_process": {
         "MicroserviceID_1": "FAILED",
@@ -268,44 +275,69 @@ def check_list(param_str: str):
 """
 
 
-async def application_healthcheck(deployed_apps, worker_list, SYSTEM_MANAGER_URL):
+def find_matching_prefix(process, sorted_prefixes):
+    idx = bisect.bisect_left(sorted_prefixes, process)
 
+    if idx < len(sorted_prefixes) and process.startswith(sorted_prefixes[idx]):
+        return sorted_prefixes[idx]
+
+    if idx > 0 and process.startswith(sorted_prefixes[idx - 1]):
+        return sorted_prefixes[idx - 1]
+
+    return None
+
+
+import json
+
+
+async def application_healthcheck(
+    system_manager_url, deployed_apps, worker_list, expected_outputs
+):
     running_statuses = {}
     failed_statuses = {}
     services_unified = []
 
-    for ids in deployed_apps.values():
-        services_unified.extend(ids)
+    # Collect all services from deployed_apps
+    for app_list in deployed_apps.values():
+        services_unified.extend(app_list)
 
+    # Sort process prefixes for searching
+    sorted_prefixes = sorted(expected_outputs.keys())
+
+    # Fetch the status from the system manager
     request_status, request_body = await get_request(
-        url=f"http://{SYSTEM_MANAGER_URL}:10000/api/services/"
+        url=f"http://{system_manager_url}:10000/api/services/"
     )
 
-    if request_status in (200, 201):
+    if request_status in {200, 201}:
         request_body = json.loads(request_body)
+
         if request_body:
             for service in request_body:
-                if service and service["microserviceID"] in services_unified:
-                    instance_list = service.get("instance_list", [])
-                    if instance_list:
-                        for instance in instance_list:
-                            process = (
-                                service["job_name"]
-                                + ".instance."
-                                + str(instance["instance_number"])
+                microservice_id = service.get("microserviceID")
+                if microservice_id in services_unified:
+                    for instance in service.get("instance_list", []):
+                        process_name = f"{service['job_name']}.instance.{instance.get('instance_number')}"
+
+                        if instance.get("status") == "RUNNING":
+                            host = instance.get("publicip")
+
+                            process_prefix = find_matching_prefix(
+                                process_name, sorted_prefixes
                             )
-                            if instance.get("status") == "RUNNING":
 
-                                host = instance.get("publicip")
-                                if host in running_statuses:
-                                    running_statuses[host].append(process)
-                                else:
-                                    running_statuses[host] = [process]
+                            if process_prefix:
+                                expected_output = expected_outputs[process_prefix]
 
-                            else:
-                                failed_statuses[service["microserviceID"]] = (
-                                    process + "_" + instance.get("status")
-                                )
+                                if host not in running_statuses:
+                                    running_statuses[host] = {}
+
+                                running_statuses[host][process_name] = expected_output
+
+                        else:
+                            failed_statuses[microservice_id] = (
+                                f"{process_name}_{instance.get('status')}"
+                            )
 
     return running_statuses, failed_statuses
 
@@ -337,7 +369,7 @@ async def main_async():
 
         deploy_mode = "one-doc" if onedoc_enabled else "rc" if rc_enabled else "full"
 
-        updated_sla = check_correspondence(
+        updated_sla, expected_outputs = check_correspondence(
             json_data, worker_list, cluster_names, deploy_mode
         )
         if updated_sla and root_group:
@@ -367,7 +399,7 @@ async def main_async():
                     await asyncio.sleep(30)
 
                     running_processes, failed_processes = await application_healthcheck(
-                        success, worker_list, SYSTEM_MANAGER_URL
+                        SYSTEM_MANAGER_URL, success, worker_list, expected_outputs
                     )
 
                     process_statuses = {
