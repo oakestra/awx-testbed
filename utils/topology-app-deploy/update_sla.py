@@ -253,6 +253,21 @@ def check_list(param_str: str):
         return
 
 
+"""
+
+{
+    "running_processes": {
+        "192.168.1.2": ["newapp.test2.service1.test1","newapp.test2.service2.test2.instance.0"],
+        "192.168.1.3": ["clientsrvr1.test1.curl.test1","clientsrvr1.test1.nginx.test1"]
+    },
+    "failed_process": {
+        "MicroserviceID_1": "FAILED",
+    } 
+}
+
+"""
+
+
 async def application_healthcheck(deployed_apps, worker_list, SYSTEM_MANAGER_URL):
 
     running_statuses = {}
@@ -282,8 +297,10 @@ async def application_healthcheck(deployed_apps, worker_list, SYSTEM_MANAGER_URL
                             if instance.get("status") == "RUNNING":
 
                                 host = instance.get("publicip")
-
-                                running_statuses[host] = process
+                                if running_statuses[host]:
+                                    running_statuses[host].append(process)
+                                else:
+                                    running_statuses[host] = [process]
 
                             else:
                                 failed_statuses[service["microserviceID"]] = (
@@ -353,16 +370,18 @@ async def main_async():
                         success, worker_list, SYSTEM_MANAGER_URL
                     )
 
+                    process_statuses = {
+                        "running_processes": running_processes,
+                        "failed_process": failed_processes,
+                    }
+
                     # print("Service statuses:")
-                    print(running_processes)
+                    print(process_statuses)
                     # Save statuses JSON dict to file
                     # Filter out from statuses keys that are not IP addresses
 
-                    with open("/tmp/run_process_dictionary.json", "w") as f:
-                        json.dump(running_processes, f, indent=4)
-
-                    with open("/tmp/failed_process_dictionary.json", "w") as f:
-                        json.dump(failed_processes, f, indent=4)
+                    with open("/tmp/process_statuses.json", "w") as f:
+                        json.dump(process_statuses, f, indent=4)
 
                 # if failed:
                 # print("Failed to deploy applications:")
@@ -389,5 +408,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    # python3 update_sla.py "topo.json" "['xavier1', 'xavier2']" "['pi4-base']" "['cmvm22']"
