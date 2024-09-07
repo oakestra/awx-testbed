@@ -87,23 +87,37 @@
   debug:
     msg: "{{ ip_to_hostname }}"
 
-- name: Check if processes are running on the remote hosts and display expected outputs
+- name: Check if processes are running and validate output files
   shell: |
     #!/bin/bash
     declare -A process_outputs
     {% for process, expected_output in item.value.items() %}
-    process_outputs["{{ process | quote }}"]=" {{ expected_output | quote }}"
+    process_outputs["{{ process | quote }}"]="{{ expected_output | quote }}"
     {% endfor %}
- 
+
     for process in "${!process_outputs[@]}"; do
       if pgrep -f "$process" > /dev/null; then
-        echo "Process $process is running - Expected Output: ${process_outputs[$process]}"
+        file_path="/tmp/${process// /_}"
+        if [ -f "$file_path" ]; then
+         actual_output=$(cat "$file_path")
+          if echo "$actual_output" | grep "${process_outputs[$process]}"; then
+            echo "Process $process is running - Expected Output: ${process_outputs[$process]}"
+          else
+            echo "Process $process is running, but file content does not match expected output"
+            echo "Expected: ${process_outputs[$process]}"
+            echo "Found: $actual_output"
+            exit 1
+          fi
+        else
+          echo "Process $process is running, but the file $file_path does not exist"
+          exit 1
+        fi
       else
         echo "Process $process is not running - Expected Output: ${process_outputs[$process]}"
         exit 1
       fi
     done
-    echo "All processes are running"
+    echo "All processes are running and files are as expected"
   args:
     executable: /bin/bash
   delegate_to: "{{ ip_to_hostname[item.key] }}"
