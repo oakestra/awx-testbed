@@ -43,7 +43,7 @@
       vars:
         rootIP: "{{ root_cluster_ip }}"
         clusterName: "CL{{ inventory_hostname }}"
-        clusterLocation: ""
+        clusterLocation: "Garching2"
 
     - name: Set root cluster IP for worker nodes
       set_fact:

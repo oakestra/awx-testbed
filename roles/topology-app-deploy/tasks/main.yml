@@ -118,7 +118,7 @@
         exit 1
       fi
     done
-    echo "All processes are running and files are as expected"
+    echo "All processes are running, log files contains declared expected output"
   args:
     executable: /bin/bash
   delegate_to: "{{ ip_to_hostname[item.key] }}"

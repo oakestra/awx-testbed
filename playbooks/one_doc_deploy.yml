@@ -27,7 +27,7 @@
       vars:
         rootIP: "{{ current_ip }}"
         clusterName: "{{ inventory_hostname }}"
-        clusterLocation: ""
+        clusterLocation: "Garching2"
         additionalComposeOverrides: "-f override-alpha-versions.yaml"
 
     - name: Set OAK_ROLE environment variables on worker node
