@@ -23,7 +23,6 @@
 
 
 ################# MDNC - Stop and Cleanup Components ##########################################
-####### Stop and free worker nodes
 - hosts: "{{ group_workers_full }}"
   roles:
     - unset
