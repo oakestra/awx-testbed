@@ -20,7 +20,7 @@
 
     - name: Checkout the specific commit
       ansible.builtin.command:
-        cmd: git checkout HEAD
+        cmd: git checkout "{{ testbed_repo_commit }}"
         chdir: "{{ temp_repo_dir.path }}"
       register: git_checkout
 
@@ -28,7 +28,7 @@
       ansible.builtin.assert:
         that:
           - git_checkout.rc == 0
-        fail_msg: "Failed to checkout commit {{ commit }}"
+        fail_msg: "Failed to checkout commit {{ testbed_repo_commit }}"
 
     - name: Register testbed repository files
       ansible.builtin.find:
