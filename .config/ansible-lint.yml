@@ -77,7 +77,7 @@ warn_list:
 #   - all
 
 # Offline mode disables installation of requirements.yml and schema refreshing
-offline: false
+offline: true
 
 # Define required Ansible's variables to satisfy syntax check
 #extra_vars:
