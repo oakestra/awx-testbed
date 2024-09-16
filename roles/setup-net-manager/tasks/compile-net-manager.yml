@@ -4,7 +4,8 @@
   vars:
     repo: "{{ oak_net_repo_link }}"
     path: "{{ oak_net_repo_path }}"
-    branch: "{{ oak_net_repo_version }}"
+    branch: "develop"  # oakestra-net, TODO: parameterize
+    commit: "HEAD"    # oakestra-net, TODO: parameterize
 
 # This is installing go in a wierd path. Check if config is correct.
 - name: Check if Go is installed

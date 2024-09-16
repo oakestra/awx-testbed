@@ -1,18 +1,19 @@
 - name: Deploy root and cluster components for MDOC topology
-  hosts: "{{ group_rc_together }}"
+  hosts: "{{ input_data.group_mdoc_root }}"
   gather_facts: false
   vars:
     repo: "{{ oak_repo_link }}"
     path: "{{ oak_repo_path }}"
     branch: "{{ oak_repo_version }}"
+    commit: "{{ oak_repo_commit }}"
 
   tasks:
-    - name: Set OAK_ROLE environment variables on root node
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: 'OAK_ROLE=root'
-        create: true
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "root_cluster_mdoc"
+        status: "busy"
 
     - name: Include role to ensure cloned repo
       include_role:
@@ -21,6 +22,8 @@
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
+        commit: "{{ oak_repo_commit }}"
+
 
     - name: Retrieve rootIP address from hostname
       set_fact:
@@ -43,19 +46,19 @@
       vars:
         rootIP: "{{ root_cluster_ip }}"
         clusterName: "CL{{ inventory_hostname }}"
-        clusterLocation: ""
+        clusterLocation: "Garching2"
 
     - name: Set root cluster IP for worker nodes
       set_fact:
         root_cluster_ip: "{{ root_cluster_ip }}"
 
 - name: Deploy worker components for full topology
-  hosts: "{{ group_rc_workers }}"
+  hosts: "{{ input_data.group_mdoc_workers }}"
   tasks:
 
-    - name: Retrieve root&cluster hostname from group_rc_together
+    - name: Retrieve root&cluster hostname from input_data.group_mdoc_root
       set_fact:
-        root_hostname: "{{ group_rc_together[0] }}"
+        root_hostname: "{{ input_data.group_mdoc_root[0] }}"
 
     - name: Retrieve root IP address
       set_fact:
@@ -65,12 +68,12 @@
       debug:
         msg: "Root&Cluster IP address for worker {{ inventory_hostname }} is {{ root_cluster_ip }}"
 
-    - name: Set OAK_ROLE environment variables on worker node {{ inventory_hostname }}
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: "OAK_ROLE=worker_{{ inventory_hostname }}"
-        create: true
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "worker_{{ inventory_hostname }}"
+        status: "busy"
 
     - name: Setup network manager entrypoint for node {{ inventory_hostname }}
       include_role:
@@ -97,9 +100,36 @@
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
 
+
     - name: Run node-engine on node {{ inventory_hostname }}
       environment:
         CLUSTER_IP: '{{ root_cluster_ip }}'
       shell: 'nohup /bin/NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 </dev/null >/tmp/nodeengine.log 2>&1 &'
       become: true
       ignore_errors: false
+
+- name: Define stats for component status check
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Read {{ input_data.topology_filename }} topology descriptor JSON file
+      ansible.builtin.slurp:
+        src: "{{ testbed_tmp_path }}/{{ topologies_folder }}/{{ input_data.topology_filename }}"
+      register: json_file_content
+
+    - name: Decode {{ input_data.topology_filename }} JSON content
+      set_fact:
+        topology_descriptor: "{{ json_file_content.content | b64decode }}"
+
+    - name: Set stats for component status check
+      set_stats:
+        data:
+          group_1doc: "[]"
+          group_mdoc_root: "{{ input_data.group_mdoc_root }}"
+          group_mdoc_workers: "{{ input_data.group_mdoc_workers }}"
+          group_mdnc_root: "[]"
+          group_mdnc_clusters: "[]"
+          group_mdnc_workers: "[]"
+          onedoc: false
+          mdoc: true
+          topology_desc: "{{ topology_descriptor }}"

@@ -1,5 +1,5 @@
-- name: Deploy components for 1DOC topology host ({{ group_1doc }})
-  hosts: "{{ group_1doc }}"
+- name: Deploy components for 1DOC topology host ({{ input_data.group_1doc }})
+  hosts: "{{ input_data.group_1doc }}"
   gather_facts: true
   tasks:
     - name: Retrieve {{ inventory_hostname }} hostname IP address
@@ -19,23 +19,23 @@
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
-        commit: "{{ commit }}"
-      
+        commit: "{{ oak_repo_commit }}"
+
     - name: Start 1DOC components (node {{ inventory_hostname }})
       include_role:
         name: start-1-doc
       vars:
         rootIP: "{{ current_ip }}"
         clusterName: "{{ inventory_hostname }}"
-        clusterLocation: ""
+        clusterLocation: "Garching2"
         additionalComposeOverrides: "-f override-alpha-versions.yaml"
 
-    - name: Set OAK_ROLE environment variables on worker node
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: "OAK_ROLE=worker_{{ inventory_hostname }}"
-        create: yes
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "worker_{{ inventory_hostname }}"
+        status: "busy"
 
     - name: Setup network manager entrypoint for node {{ inventory_hostname }}
       include_role:
@@ -61,6 +61,7 @@
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
+        commit: "{{ oak_repo_commit }}"
 
     - name: Run node-engine on node {{ inventory_hostname }}
       environment:
@@ -68,3 +69,31 @@
       shell: 'nohup sudo /bin/NodeEngine -n 6000 -p 10100 </dev/null >/tmp/nodeengine.log 2>&1 &'
       become: true
       ignore_errors: false
+
+
+- name: Define stats for component status check
+  hosts: localhost
+  gather_facts: false
+  tasks:
+
+    - name: Read {{ input_data.topology_filename }} topology descriptor JSON file
+      ansible.builtin.slurp:
+        src: "{{ testbed_tmp_path }}/{{ topologies_folder }}/{{ input_data.topology_filename }}"
+      register: json_file_content
+
+    - name: Decode {{ input_data.topology_filename }} JSON content
+      set_fact:
+        topology_descriptor: "{{ json_file_content.content | b64decode }}"
+
+    - name: Set stats for component status check
+      set_stats:
+        data:
+          group_1doc: "{{ input_data.group_1doc }}"
+          group_mdoc_root: "[]"
+          group_mdoc_workers: "[]"
+          group_mdnc_root: "[]"
+          group_mdnc_clusters: "[]"
+          group_mdnc_workers: "[]"
+          onedoc: true
+          mdoc: false
+          topology_desc: "{{ topology_descriptor }}"

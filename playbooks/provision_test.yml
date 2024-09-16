@@ -1,55 +1,16 @@
+---
 - name: 2. Host Provisioning Phase
-  hosts: localhost
-  tasks:
-
-    - name: Parse JSON topology structure
-      set_fact:
-        topology: "{{ topology_desc | from_json }}"
-
-    - name: Retrieved topology
-      debug:
-        var: topology
-
-    - name: Compute required number of hosts based on topology
-      set_fact:
-        num_clusters: "{{ topology.topology_descriptor.cluster_list | length }}"
-        num_nodes: "{{ topology.topology_descriptor.cluster_list | map(attribute='workers_number') | sum }}"
-        onedoc: "{{ topology.topology_descriptor.onedoc | bool }}"
-        mdoc: "{{ topology.topology_descriptor.mdoc | bool }}"
-
-    - name: Compute requested_vms based on onedoc and mdoc flags
-      set_fact:
-        requested_vms: >-
-          {%- if onedoc -%}
-          1
-          {%- elif mdoc -%}
-          {{ (1 | int) + (num_nodes | int) }}
-          {%- else -%}
-          {{ (1 | int) + (num_clusters | int) + (num_nodes | int) }}
-          {%- endif -%}
-
-    - name: Store requested_vms in stats
-      set_stats:
-        data:
-          requested_vms: "{{ requested_vms }}"
-
-- name: Check hosts availability by inspecting $OAK_STATUS
   hosts: all
-  gather_facts: false
+  gather_facts: true
   tasks:
     - name: Check OAK_STATUS for each inventory host
       shell: |
         echo $OAK_STATUS
       register: oak_status
 
-    - name: Debug hosts status
-      debug:
-        msg: "Host {{ inventory_hostname }} status {{ oak_status.stdout }}"
-      when: oak_status.stdout is defined
-
-    - name: Set host availability if not busy 
+    - name: Set host availability if not busy
       set_fact:
-        host_available: "{{ oak_status.stdout == 'free' }}"
+        host_available: "{{ oak_status.stdout != 'busy' }}"
       when: oak_status.stdout is defined
 
     - name: Set host availability if OAK_STATUS is not set
@@ -63,71 +24,121 @@
       when: host_available
       delegate_facts: true
 
-- name: Verify enough hosts are available for topology deployment
+
+- name: 2. Host Provisioning Phase
   hosts: localhost
-  gather_facts: false
+  vars:
+    job_mapping:
+      onedoc: "[SQ] 3. [1-DOC] Execution Phase"
+      mdoc: "[SQ] 3. [M-DOC] Execution Phase"
+      mdnc: "[SQ] 3. [MDNC] Execution Phase"
+      failure_cleanup: "[SQ] 6. Stop Services & Clean-up"
   tasks:
-    - name: Retrieve available hosts
-      set_fact:
-        available_hosts: "{{ hostvars | dict2items | selectattr('value.host_available', 'defined') | selectattr('value.host_available', 'eq', True) | map(attribute='key') | list }}"
+    - name: Pipeline Consistency Block
+      block:
+        - name: Retrieve available hosts
+          set_fact:
+            available_hosts: "{{ hostvars | dict2items | selectattr('value.host_available', 'defined') | selectattr('value.host_available', 'eq', True) | map(attribute='key') | list }}"
 
-    - name: Remove localhost from available hosts
-      set_fact:
-        available_hosts: "{{ available_hosts | difference(['localhost']) }}"
+        - name: List available hosts
+          debug:
+            msg: "Available hosts: {{ available_hosts }}"
 
-    - name: List available hosts
-      debug:
-        msg: "Available hosts: {{ available_hosts }}"
+        - name: Remove localhost from available hosts
+          set_fact:
+            available_hosts: "{{ available_hosts | difference(['localhost']) }}"
 
-    - name: Requested VMs display
-      debug:
-        msg: "Total VMs: {{ requested_vms }}"
+        - name: Execute the Python script with sudo and parameters
+          command: >
+            /usr/bin/python3 "{{ testbed_tmp_path }}"/utils/provisioning/hosts_provision.py "{{ testbed_tmp_path }}/{{ topologies_folder }}" "{{ available_hosts }}"
+          register: result_output
 
-    - name: Set availability flag based on available hosts
-      set_fact:
-        enough_hosts: "{{ available_hosts | length >= requested_vms | int }}"
 
-    - name: Availability failure
-      fail:
-        msg: "Not enough available hosts. Required: {{ requested_vms }}, Available: {{ available_hosts | length }}"
-      when: not enough_hosts
+        - name: Read the JSON file
+          slurp:
+            src: "{{ testbed_tmp_path }}/{{ topologies_folder }}/dispatch.json"
+          register: json_content
 
-    - name: Compute required hosts to tag as busy
-      set_fact:
-        hosts_to_tag_busy: "{{ available_hosts[:requested_vms | int] | list }}"
+        - name: Decode and parse the JSON content
+          set_fact:
+            runs: "{{ json_content['content'] | b64decode | from_json }}"
 
-    - name: Tag the required number of available hosts as busy, setting OAK_STATUS
-      when: enough_hosts
-      delegate_to: "{{ item }}"
-      become: true
-      lineinfile:
-        path: /etc/environment
-        create: yes
-        regexp: '^OAK_STATUS='
-        line: 'OAK_STATUS=busy'
-      with_items: "{{ hosts_to_tag_busy }}"
 
-    - name: Store reserved_hosts group in stats
-      set_fact:
-        reserved_hosts: "{{ available_hosts[:requested_vms | int] | list }}"
+        - name: ℹ️ Dispatch execution plan & selected hosts list ℹ️
+          ansible.builtin.debug:
+            msg: "{{ result_output.stdout }}"
+          ignore_errors: true
+          when: result_output is defined
 
-    - name: Matching deploy strategy with reserved hosts
-      set_stats:
-        data:
-          onedoc: "{{ onedoc }}"
-          mdoc: "{{ mdoc }}"
-          num_clusters: "{{ num_clusters }}"
-          num_nodes: "{{ num_nodes }}"
-          topology_desc: "{{ topology_desc }}"
-          requested_vms: "{{ requested_vms }}"
-          reserved_hosts: "{{ reserved_hosts }}"
+        - name: "Debug runs['reserved_hosts']"
+          debug:
+            msg: "{{ runs['reserved_hosts'] }}"
+          when: runs['reserved_hosts'] is defined
 
-    - name: Assign hosts to groups based on the conditions
-      set_stats:
-        data:
-          group_1doc: "{{ reserved_hosts[:1] if onedoc else [] }}"
-          group_rc_together: "{{ reserved_hosts[:1] if not onedoc and mdoc else [] }}"
-          group_rc_workers: "{{ reserved_hosts[1:] if not onedoc and mdoc else [] }}"
-          group_root_full: "{{ reserved_hosts[:1] if not onedoc and not mdoc else [] }}"
-          group_clusters_full: "{{ reserved_hosts[1:(1 + (num_clusters | int))] if not onedoc and not mdoc else [] }}"
-          group_workers_full: "{{ reserved_hosts[(1 + (num_clusters | int)):(1 + (num_clusters | int) + (num_nodes | int))] if not onedoc and not mdoc else [] }}"
+        - name: ⏳ Dispatch ONEDOC scenario topology jobs ⚙️
+          awx.awx.workflow_launch:
+            workflow_template: "{{ job_mapping['onedoc'] }}"
+            extra_vars:
+              input_data: "{{ item }}"
+              testbed_tmp_path: "{{ testbed_tmp_path }}"
+              oak_repo_version: "{{ oak_repo_branch }}"
+              oak_repo_commit: "{{ oak_repo_commit }}"
+              topologies_folder: "{{ topologies_folder }}"
+            validate_certs: false
+            controller_oauthtoken: "{{ token }}"
+            wait: true
+          loop: "{{ runs['onedoc'] }}"
+          when: runs['onedoc'] is defined
+
+        - name: ⏳ Dispatch MDOC scenario topology jobs ⚙️
+          awx.awx.workflow_launch:
+            workflow_template: "{{ job_mapping['mdoc'] }}"
+            extra_vars:
+              input_data: "{{ item }}"
+              testbed_tmp_path: "{{ testbed_tmp_path }}"
+              oak_repo_version: "{{ oak_repo_branch }}"
+              oak_repo_commit: "{{ oak_repo_commit }}"
+              topologies_folder: "{{ topologies_folder }}"
+            validate_certs: false
+            controller_oauthtoken: "{{ token }}"
+            wait: true
+          loop: "{{ runs['mdoc'] }}"
+          when: runs['mdoc'] is defined
+
+        - name: ⏳ Dispatch MDNC scenario topology jobs ⚙️
+          awx.awx.workflow_launch:
+            workflow_template: "{{ job_mapping['mdnc'] }}"
+            extra_vars:
+              input_data: "{{ item }}"
+              testbed_tmp_path: "{{ testbed_tmp_path }}"
+              oak_repo_version: "{{ oak_repo_branch }}"
+              oak_repo_commit: "{{ oak_repo_commit }}"
+              topologies_folder: "{{ topologies_folder }}"
+              onedoc: false
+              mdoc: false
+            validate_certs: false
+            controller_oauthtoken: "{{ token }}"
+            wait: true
+          loop: "{{ runs['mdnc'] }}"
+          when: runs['mdnc'] is defined
+
+      rescue:
+        # Ensure consistent cleanup in case of failure
+        - name: 🔴 ⚠️ 🔴 Fallback to failure cleanup job for failure scenario 🔴 ⚠️ 🔴
+          awx.awx.job_launch:
+            job_template: "{{ job_mapping['failure_cleanup'] }}"
+            extra_vars:
+              group_1doc: "{{ available_hosts }}"
+              group_mdoc_root: "{{ available_hosts }}"
+              group_mdoc_workers: "{{ available_hosts }}"
+              group_mdnc_root: "{{ available_hosts }}"
+              group_mdnc_clusters: "{{ available_hosts }}"
+              group_mdnc_workers: "{{ available_hosts }}"
+            job_type: run
+            validate_certs: false
+            controller_oauthtoken: "{{ token }}"
+            wait: true
+
+        - name: Report failure to dispatch jobs
+          fail:
+            msg: "Failed to dispatch jobs: check the dispatch section for detailed error message"

@@ -6,20 +6,20 @@
   vars:
     docker_compose_file: "{{ oak_repo_path }}/run-a-cluster/1-DOC.yaml"
 
-- hosts: "{{ group_clusters_full }}"
+- hosts: "{{ group_mdnc_clusters }}"
   roles:
     - root-cluster-running-check
   vars:
     docker_compose_file: "{{ oak_repo_path }}/cluster_orchestrator/docker-compose.yml"
 
 
-- hosts: "{{ group_root_full }}"
+- hosts: "{{ group_mdnc_root }}"
   roles:
     - root-cluster-running-check
   vars:
     docker_compose_file: "{{ oak_repo_path }}/root_orchestrator/docker-compose.yml"
 
 
-- hosts: "{{ group_workers_full }}"
+- hosts: "{{ group_mdnc_workers }}"
   roles:
     - worker-running-check

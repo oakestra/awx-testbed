@@ -5,6 +5,8 @@
     repo: "{{ oak_repo_link }}"
     path: "{{ oak_repo_path }}"
     branch: "{{ oak_repo_version }}"
+    commit: "{{ oak_repo_commit }}"
+
 
 - name: Check if Go is installed
   ansible.builtin.include_role: 

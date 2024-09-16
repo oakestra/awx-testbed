@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 
 
@@ -6,11 +7,11 @@ def validate_topology(json_data):
     try:
         topology_descriptor = json_data["topology_descriptor"]
 
-        # Validate onedoc
+        # Validate one_doc_enabled
         if not isinstance(topology_descriptor.get("onedoc"), bool):
             return False
 
-        # Validate mdoc
+        # Validate together_root_cluster
         if not isinstance(topology_descriptor.get("mdoc"), bool):
             return False
 
@@ -23,7 +24,7 @@ def validate_topology(json_data):
             # Validate cluster_number
             if not isinstance(cluster.get("cluster_number"), int):
                 return False
-            # Validate workers_number
+            # Validate number_of_nodes
             if not isinstance(cluster.get("workers_number"), int):
                 return False
 
@@ -98,14 +99,28 @@ def validate_topology(json_data):
 
 
 if __name__ == "__main__":
-    json_file = sys.argv[1]
+    topologies_folder = sys.argv[1]
 
-    with open(json_file, "r") as f:
-        json_data = json.load(f)
+    # Read all the json files in the folder `topologies_folder`
+    json_files = [
+        pos_json
+        for pos_json in os.listdir(topologies_folder)
+        if pos_json.endswith(".json")
+    ]
 
-    validity = validate_topology(json_data)
+    for json_file in json_files:
+        try:
+            topology_filepath = topologies_folder + json_file
+            with open(topology_filepath, "r") as f:
+                json_data = json.load(f)
 
-    if validity:
-        print("true")
-    else:
-        print("false")
+            validity = validate_topology(json_data)
+
+            if not validity:
+                print("false")
+                sys.exit(1)
+        except Exception:
+            print("false")
+            sys.exit(1)
+
+    print("true")

@@ -11,7 +11,7 @@
     - name: Add {{ inventory_hostname }} to hostname list
       set_fact:
         hostname_list: "{{ local_hostname.stdout }}"
-      #delegate_facts: true
+      delegate_facts: true
 
 - name: (1DOC Topology) - App Deploy
   hosts: localhost
@@ -25,15 +25,15 @@
       when: onedoc and not mdoc
 
 - name: (MDNC Topology) - Retrieve hostnames of workers
-  hosts: "{{ group_workers_full}}"
+  hosts: "{{ group_mdnc_workers }}"
   gather_facts: true
   tasks:
-    - name: (MDNC Topology) Retrieve hostname(s)
+    - name: Retrieve hostname for {{ inventory_hostname }}
       shell: |
         hostname
       register: local_hostname
 
-    - name: (MDNC Topology) Add gathered hostnames to list
+    - name: Add {{ inventory_hostname }} to hostname list
       set_fact:
         hostname_list: "{{ local_hostname.stdout }}"
       delegate_facts: true
@@ -44,14 +44,14 @@
     - role: topology-app-deploy
       vars:
         local_hostname: "{{ local_hostname }}"
-        group_root: "{{ group_root_full}}"
-        group_clusters: "{{ group_clusters_full }}"
+        group_root: "{{ group_mdnc_root }}"
+        group_clusters: "{{ group_mdnc_clusters }}"
         topology_desc: "{{ topology_desc }}"
       when: not onedoc and not mdoc
 
 
 - name: (M-DOC) - Retrieve hostnames of workers
-  hosts: "{{ group_rc_workers }}"
+  hosts: "{{ group_mdoc_workers }}"
   gather_facts: true
   tasks:
     - name: Retrieve hostname for {{ inventory_hostname }}
@@ -70,7 +70,7 @@
     - role: topology-app-deploy
       vars:
         local_hostname: "{{ local_hostname }}"
-        group_root: "{{ group_rc_together }}"
-        group_clusters: "{{ group_rc_together }}"
+        group_root: "{{ group_mdoc_root }}"
+        group_clusters: "{{ group_mdoc_root }}"
         topology_desc: "{{ topology_desc }}"
       when: not onedoc and mdoc

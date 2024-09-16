@@ -9,7 +9,8 @@
     repo: "{{ repo }}"
     dest: "{{ path }}"
     version: "{{ branch }}"
-    update: false  # Do not update if it already exists
+    update: true
+    force: true
 
 - name: Check if {{ commit }} exists on branch {{ branch }}
   ansible.builtin.command:

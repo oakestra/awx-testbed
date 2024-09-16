@@ -12,19 +12,19 @@
   set_fact:
     node_pids_list: "{{ node_pids.stdout_lines }}"
 
-- name: Check node_pids_list is not empty
+- name: Check node_pids_list valid
   fail:
-    msg: "NodeEngine PIDs not found"
-  when: node_pids_list == []
+    msg: "NodeEngine processes seems to fail, should have at least 2 PIDs"
+  when: node_pids_list | length < 2
 
 - name: Set fact for NetManager PIDs
   set_fact:
     net_pids_list: "{{ net_pids.stdout_lines }}"
 
-- name: Check net_pids_list is not empty
+- name: Check net_pids_list valid
   fail:
-    msg: "NetManager PIDs not found"
-  when: net_pids_list == []
+    msg: "NodeEngine processes seems to fail, should have at least 2 PIDs"
+  when: net_pids_list | length < 2
 
 - name: Check NetManager log files for errors
   shell: |

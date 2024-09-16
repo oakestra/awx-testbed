@@ -1,23 +1,22 @@
-- name: Execute Full Deploy template
+- name: (MDNC) Deploy template
   hosts: localhost
   gather_facts: false
+  vars:
+    repo: "https://github.com/TheDarkPyotr/sequential-test"
+    branch: "main"
   tasks:
     - name: Check MNDC Deploy flags
       block:
         - name: Show groups division
           debug:
             msg: |
-              Root hosts: {{ group_root_full }}
-              Cluster hosts: {{ group_clusters_full }}
-              Workers hosts: {{ group_workers_full }}
-
-        - name: Parsed topology descriptor
-          debug:
-            msg: "{{ topology_desc }}"
+              input_data.group_mdnc_root: {{ input_data.group_mdnc_root }}
+              input_data.group_mdnc_clusters: {{ input_data.group_mdnc_clusters }}
+              input_data.group_mdnc_workers: {{ input_data.group_mdnc_workers }}
 
         - name: Execute the support Script
           command: >
-            /usr/bin/python3 "{{ testbed_tmp_path }}"/utils/mdnc_deploy/combination.py "{{ testbed_tmp_path }}/topologies/{{ topology_descriptor }}" "{{ group_clusters_full }}" "{{ group_workers_full }}"
+            /usr/bin/python3 "{{ testbed_tmp_path }}"/utils/mdnc_deploy/combination.py "{{ testbed_tmp_path }}/{{ topologies_folder }}/{{ input_data.topology_filename }}" "{{ input_data.group_mdnc_clusters }}" "{{ input_data.group_mdnc_workers }}"
           register: result_output
 
         - name: Set dictionary result output
@@ -28,9 +27,26 @@
           debug:
             msg: "script_result is {{ script_result }}"
 
-        - name: Set topology_desc as JSON
+        - name: Read  topology descriptor JSON file
+          ansible.builtin.slurp:
+            src: "{{ testbed_tmp_path }}/{{ topologies_folder }}/{{ input_data.topology_filename }}"
+          register: json_file_content
+
+        - name: Decode JSON content
           set_fact:
-            topology_desc: "{{ topology_desc | to_json }}"
+            topology_descriptor_content: "{{ json_file_content.content | b64decode }}"
+            
+        - name: Debug the type of decoded content
+          debug:
+            msg: "Type of topology_descriptor_content: {{ topology_descriptor_content.__class__.__name__ }}"
+
+        - name: Set topology_desc as a parsed JSON object if content is a string
+          set_fact:
+            topology_desc: "{{ topology_descriptor_content if topology_descriptor_content is not string else topology_descriptor_content | from_json }}"
+
+        - name: Print the topology descriptor
+          debug:
+            msg: "{{ topology_desc }}"
 
         - name: Set facts for cluster and worker associations
           set_fact:
@@ -40,6 +56,10 @@
           set_fact:
             cluster_ids: "{{ topology_desc.topology_descriptor.cluster_list | map(attribute='cluster_number') | list }}"
 
+        - name: Set num_clusters as the length of cluster_ids
+          set_fact:
+            num_clusters: "{{ cluster_ids | length }}"
+
         - name: Cast num_clusters to an integer
           set_fact:
             num_clusters_int: "{{ num_clusters | int }}"
@@ -47,7 +67,7 @@
         - name: Set cluster host ranges
           set_fact:
             cluster_host_ranges: >
-              {{ dict(cluster_ids | zip(reserved_hosts[1:(1 | int + (num_clusters_int | int))]) | list) }}
+              {{ dict(cluster_ids | zip(input_data.group_mdnc_clusters[0:(1 | int + (num_clusters_int | int))]) | list) }}
           register: cluster_host_ranges
 
         - name: Set worker map
@@ -63,25 +83,27 @@
         - name: Print the cluster and worker associations
           debug:
             msg: |
-              Cluster Host Map: {{ cluster_host_ranges.ansible_facts.cluster_host_ranges }}
+              Cluster Host Map: {{ cluster_map }}
               Worker Map: {{ worker_map }}
       when: not onedoc and not mdoc
 
 ################################################## DEPLOY: ROOT ##################################################
 - name: Deploy root component for full topology
-  hosts: "{{ group_root_full }}"
+  hosts: "{{ input_data.group_mdnc_root }}"
   vars:
     repo: "{{ oak_repo_link }}"
     path: "{{ oak_repo_path }}"
     branch: "{{ oak_repo_version }}"
+    commit: "{{ oak_repo_commit }}"
+
 
   tasks:
-    - name: Set OAK_ROLE environment variables on root node
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: 'OAK_ROLE=root'
-        create: true
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "root"
+        status: "busy"
 
     - name: Set environment variables for deployment root (node {{ inventory_hostname }})
       set_fact:
@@ -101,6 +123,8 @@
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
+        commit: "{{ oak_repo_commit }}"
+
 
     - name: Retrieve rootIP address from hostname
       set_fact:
@@ -120,15 +144,15 @@
 ################################################## DEPLOY: CLUSTER ##################################################
 
 - name: Deploy cluster components for full topology
-  hosts: "{{ group_clusters_full }}"
+  hosts: "{{ input_data.group_mdnc_clusters }}"
 
   tasks:
-    - name: Set OAK_ROLE environment variables on cluster node {{ inventory_hostname }}
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: "OAK_ROLE=cluster_{{ inventory_hostname }}"
-        create: yes
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "cluster_{{ inventory_hostname }}"
+        status: "busy"
 
     - name: Set environment variables for deployment cluster
       set_fact:
@@ -141,9 +165,9 @@
           Cluster IPs: "{{ cluster_map }}"
           Worker IPs: "{{ worker_map }}"
 
-    - name: Retrieve root hostname from group_root_full
+    - name: Retrieve root hostname from input_data.group_mdnc_root
       set_fact:
-        root_name: "{{ group_root_full[0] }}"
+        root_name: "{{ input_data.group_mdnc_root[0] }}"
 
     - name: Retrieve root IP address
       set_fact:
@@ -160,6 +184,8 @@
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
+        commit: "{{ oak_repo_commit }}"
+
 
     - name: Run cluster entrypoint for node {{ inventory_hostname }}
       include_role:
@@ -167,19 +193,25 @@
       vars:
         rootIP: "{{ root_ip }}"
         clusterName: "CL{{ inventory_hostname }}"
-        clusterLocation: ""
+        clusterLocation: "Garching2"
 
 ################################################## DEPLOY: WORKER ##################################################
 
 - name: Deploy worker components for full topology
-  hosts: "{{ group_workers_full }}"
+  hosts: "{{ input_data.group_mdnc_workers }}"
   tasks:
-    - name: Set OAK_ROLE environment variables on worker node {{ inventory_hostname }}
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: "OAK_ROLE=worker_{{ inventory_hostname }}"
-        create: true
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "worker_{{ inventory_hostname }}"
+        status: "busy"
+
+    - name: Print llocalhost hostvars
+      debug:
+        msg: |
+          Cluster MAP: "{{ hostvars['localhost'].cluster_map.ansible_facts.cluster_map }}"
+          Worker MAP: "{{ hostvars['localhost'].worker_map.ansible_facts.worker_map }}"
 
     - name: Set environment variables for deployment node (worker {{ inventory_hostname }})
       set_fact:
@@ -261,3 +293,28 @@
       become: true
       ignore_errors: false
 
+- name: Define stats for component status check
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Read {{ input_data.topology_filename  }} topology descriptor JSON file
+      ansible.builtin.slurp:
+        src: "{{ testbed_tmp_path }}/{{ topologies_folder }}/{{ input_data.topology_filename }}"
+      register: json_file_content
+
+    - name: Decode {{ input_data.topology_filename  }} JSON content
+      set_fact:
+        topology_descriptor: "{{ json_file_content.content | b64decode }}"
+
+    - name: Set stats for component status check
+      set_stats:
+        data:
+          group_1doc: "[]"
+          group_mdoc_root: "[]"
+          group_mdoc_workers: "[]"
+          group_mdnc_root: "{{ input_data.group_mdnc_root }}"
+          group_mdnc_clusters: "{{ input_data.group_mdnc_clusters }}"
+          group_mdnc_workers: "{{ input_data.group_mdnc_workers }}"
+          onedoc: false
+          mdoc: false
+          topology_desc: "{{ topology_descriptor }}"
