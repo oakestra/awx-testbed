@@ -12,6 +12,8 @@ profile: min # null, basic, moderate,safety, shared, production
 exclude_paths:
   - .cache/ # implicit unless exclude_paths is defined in config
   - roles/
+  - .git/
+  - .github/
 # parseable: true
 # quiet: true
 # strict: true
