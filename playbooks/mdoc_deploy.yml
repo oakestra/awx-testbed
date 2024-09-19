@@ -8,6 +8,11 @@
     commit: "{{ oak_repo_commit }}"
 
   tasks:
+
+    - name: Debug oak_repo_path
+      debug:
+        msg: "{{ oak_repo_path }}"
+
     - name: Set OAK_STATUS and OAK_ROLE by including role
       include_role:
         name: set-role-availability

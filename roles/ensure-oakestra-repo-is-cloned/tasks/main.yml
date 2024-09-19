@@ -71,7 +71,7 @@
 
 - name: Version execution and fork mode
   ansible.builtin.debug:
-    msg: "Executing version: {{ git_version }}, remote fork retrieval: {{ check_remote }}"
+    msg: "Branch: {{ branch }}, commit: {{ git_version }} (Remote fork: {{ check_remote }})"
   when: git_version is defined
 
 - name: Ensure repository is at the correct state (commit or branch)
