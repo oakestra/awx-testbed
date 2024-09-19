@@ -37,16 +37,16 @@
   ansible.builtin.debug:
     msg: "{{ commit_check_local }}"
   when: commit_check_local is defined
-  
+
 - name: Set git_version to {{ commit }} if valid
   set_fact:
     git_version: "{{ commit }}"
-  when: commit_check_local is defined and commit_check_local.rc == 0
+  when: (branch_check_local is defined) and (commit_check_local.rc == 0)
 
 - name: Set check_remote to true if failed to retrieve locally
   set_fact:
     check_remote: true
-  when: commit_check_local is defined and commit_check_local.rc != 0 and branch_check_local is defined and branch_check_local.rc != 0
+  when: branch_check_local is defined and branch_check_local.rc != 0 and commit_check_local.rc != 0
 
   # git ls-remote --refs origin | grep "{{ commit }}"
 - name: Check if {{ commit }} exists on remote
