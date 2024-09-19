@@ -1,8 +1,7 @@
 ---
 - name: Ensure dedicated oakestra repository directory exists
-  ansible.builtin.file:
+  ansible.builtin.stat:
     path: "{{ path }}"
-    state: directory
   register: repo_dir
 
 - name: Clone repository if not already present
