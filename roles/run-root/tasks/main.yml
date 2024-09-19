@@ -2,10 +2,10 @@
   environment:
     SYSTEM_MANAGER_URL: '{{ rootIP }}'  
   shell: cd  {{ oak_repo_path }}/root_orchestrator && nohup docker compose -f docker-compose.yml up --build --detach
-  become: True
+  become: true
   when: '"v0." in oak_net_repo_version'
 
 - name: Run Root Components with custom version
   import_tasks: custom-root-component.yml
+  become: true
   when: 'not "v0." in oak_net_repo_version'
-
