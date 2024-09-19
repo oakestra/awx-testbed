@@ -52,8 +52,8 @@
 
   # git ls-remote --refs origin | grep "{{ commit }}"
 - name: Check if {{ commit }} exists on remote
-  ansible.builtin.command:
-    cmd: git ls-remote --refs origin | grep "{{ commit }}"
+  ansible.builtin.shell:
+    cmd: "git ls-remote --refs origin | grep '{{ commit }}'"
   args:
     chdir: "{{ path }}"
   register: commit_check_remote
