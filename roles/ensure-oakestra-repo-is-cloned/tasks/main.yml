@@ -39,7 +39,7 @@
   when: commit_check_local.rc != 0
 
 
-- name: Debug commit_check_local variable
+- name: Debug branch_check_local variable
   ansible.builtin.debug:
     msg: "{{ branch_check_local }}"
   when: branch_check_local is defined
@@ -48,7 +48,7 @@
 - name: Set check_remote to true if failed to retrieve locally
   set_fact:
     check_remote: true
-  when: commit_check_local.rc != 0 branch_check_local is defined and branch_check_local.rc != 0
+  when: commit_check_local.rc != 0 and branch_check_local is defined and branch_check_local.rc != 0
 
   # git ls-remote --refs origin | grep "{{ commit }}"
 - name: Check if {{ commit }} exists on remote
