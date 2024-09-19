@@ -65,10 +65,10 @@
     msg: "{{ commit_check_remote }}"
   when: commit_check_remote is defined
 
-- name: Extract the branch name from commit_check_remote
+- name: Extract branch reference from commit_check_remote
   ansible.builtin.set_fact:
-    branch_ref: "{{ commit_check_remote.stdout | regex_search('refs/.*', '\\0') }}"
-  when: check_remote and commit_check_remote is defined and commit_check_remote.rc == 0
+    branch_ref: "{{ commit_check_remote.stdout | regex_replace('^.*\\s', '') }}"
+  when: check_remote and commit_check_remote is defined and commit_check_remote.rc == 0 and commit_check_remote.stdout != ''
 
 - name: Fetch the branch from remote
   ansible.builtin.command:
