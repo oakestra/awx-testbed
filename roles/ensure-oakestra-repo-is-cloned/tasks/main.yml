@@ -3,13 +3,14 @@
   ansible.builtin.file:
     path: "{{ path }}"
     state: directory
+  register: repo_dir
 
 - name: Clone repository if not already present
   ansible.builtin.git:
     repo: "{{ repo }}"
     dest: "{{ path }}"
     update: true
-    force: true
+  when: not repo_dir.stat.exists
 
 - name: Check if {{ commit }} exists locally
   ansible.builtin.command:
