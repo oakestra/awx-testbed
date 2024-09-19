@@ -9,6 +9,7 @@
     repo: "{{ repo }}"
     dest: "{{ path }}"
     update: true
+    force: true
   when: not repo_dir.stat.exists
 
 - name: Check if {{ commit }} exists locally
@@ -19,10 +20,6 @@
   register: commit_check_local
   ignore_errors: true
 
-- name: Debug commit_check_local variable
-  ansible.builtin.debug:
-    msg: "{{ commit_check_local }}"
-  when: commit_check_local is defined
 
 - name: Set git_version to {{ commit }} if valid
   set_fact:
@@ -38,12 +35,6 @@
   ignore_errors: true
   when: commit_check_local.rc != 0
 
-
-- name: Debug branch_check_local variable
-  ansible.builtin.debug:
-    msg: "{{ branch_check_local }}"
-  when: branch_check_local is defined
-
 ###############################################################################à
 - name: Set check_remote to true if failed to retrieve locally else set to false if successful
   set_fact:
@@ -58,11 +49,6 @@
   register: commit_check_remote
   ignore_errors: true
   when: check_remote
-
-- name: Debug commit_check_remote variable
-  ansible.builtin.debug:
-    msg: "{{ commit_check_remote }}"
-  when: commit_check_remote is defined
 
 - name: Extract branch reference from commit_check_remote
   ansible.builtin.set_fact:
@@ -83,9 +69,9 @@
     git_version: "{{ branch }}"
   when: check_remote and branch_fetch is defined and branch_fetch.rc == 0
 
-- name: Debug git_version variable
+- name: Version execution and fork mode
   ansible.builtin.debug:
-    msg: "Executing version: {{ git_version }}, fork: {{ check_remote }}"
+    msg: "Executing version: {{ git_version }}, remote fork retrieval: {{ check_remote }}"
   when: git_version is defined
 
 - name: Ensure repository is at the correct state (commit or branch)
