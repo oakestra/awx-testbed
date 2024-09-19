@@ -8,27 +8,70 @@
   ansible.builtin.git:
     repo: "{{ repo }}"
     dest: "{{ path }}"
-    version: "{{ branch }}"
     update: true
     force: true
 
-- name: Check if {{ commit }} exists on branch {{ branch }}
+- name: Check if {{ branch }} exists locally
+  ansible.builtin.command:
+    cmd: git cat-file -t "{{ branch }}"
+  args:
+    chdir: "{{ path }}"
+  register: branch_check_local
+  ignore_errors: true
+
+- name: Set git_version to {{ branch }} if valid
+  set_fact:
+    git_version: "{{ branch }}"
+  when: branch_check_local.rc == 0
+
+- name: Check if {{ commit }} exists locally on branch {{ branch }}
   ansible.builtin.command:
     cmd: git cat-file -t "{{ commit }}"
   args:
     chdir: "{{ path }}"
-  register: commit_check
-  ignore_errors: true  # Ignore errors if the commit doesn't exist
+  register: commit_check_local
+  ignore_errors: true
+  when: branch_check_local.rc == 0
 
-- name: Set git_version to {{ commit }} if valid, otherwise to {{ branch }}
+- name: Set git_version to {{ commit }} if valid
   set_fact:
     git_version: "{{ commit }}"
-  when: commit_check.rc == 0
+  when: commit_check_local.rc == 0
 
-- name: Set git_version to {{ branch }} if commit is not valid
+- name: Set check_remote to true if failed to retrieve locally
+  set_fact:
+    check_remote: true
+  when: commit_check_local.rc != 0 and branch_check_local.rc != 0
+
+  # git ls-remote --refs origin | grep "{{ commit }}"
+- name: Check if {{ commit }} exists on remote
+  ansible.builtin.command:
+    cmd: git ls-remote --refs origin | grep "{{ commit }}"
+  args:
+    chdir: "{{ path }}"
+  register: commit_check_remote
+  ignore_errors: true
+  when: check_remote
+
+- name: Extract the branch name from commit_check_remote
+  ansible.builtin.set_fact:
+    branch_ref: "{{ commit_check_remote.stdout | regex_search('refs/.*', '\\0') }}"
+  when: check_remote and commit_check_remote is defined and commit_check_remote.rc == 0
+
+- name: Fetch the branch from remote
+  ansible.builtin.command:
+    cmd: git fetch origin "{{ branch_ref }}:{{ branch }} "
+  args:
+    chdir: "{{ path }}"
+  register: branch_fetch
+  ignore_errors: true
+  when: check_remote and commit_check_remote is defined and commit_check_remote.rc == 0
+
+- name: Set git_version to {{ branch }} if branch_fetch is successful
   set_fact:
     git_version: "{{ branch }}"
-  when: commit_check.rc != 0
+  when: check_remote and branch_fetch is defined and branch_fetch.rc == 0
+
 
 - name: Ensure repository is at the correct state (commit or branch)
   ansible.builtin.git:
