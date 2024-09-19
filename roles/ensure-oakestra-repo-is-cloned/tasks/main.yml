@@ -71,7 +71,7 @@
 
 - name: Fetch the branch from remote
   ansible.builtin.command:
-    cmd: git fetch origin "{{ branch_ref }}:{{ branch }} "
+    cmd: "git fetch origin '{{ branch_ref }}:{{ branch | trim }}'"
   args:
     chdir: "{{ path }}"
   register: branch_fetch
