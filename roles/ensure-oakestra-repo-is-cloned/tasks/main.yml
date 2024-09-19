@@ -60,6 +60,11 @@
   ignore_errors: true
   when: check_remote
 
+- name: Debug commit_check_remote variable
+  ansible.builtin.debug:
+    msg: "{{ commit_check_remote }}"
+  when: commit_check_remote is defined
+
 - name: Extract the branch name from commit_check_remote
   ansible.builtin.set_fact:
     branch_ref: "{{ commit_check_remote.stdout | regex_search('refs/.*', '\\0') }}"
