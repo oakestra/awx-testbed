@@ -33,6 +33,11 @@
   ignore_errors: true
   when: branch_check_local.rc == 0
 
+- name: Debug commit_check_local variable
+  ansible.builtin.debug:
+    msg: "{{ commit_check_local }}"
+  when: commit_check_local is defined
+  
 - name: Set git_version to {{ commit }} if valid
   set_fact:
     git_version: "{{ commit }}"
