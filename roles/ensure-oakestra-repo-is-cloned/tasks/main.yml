@@ -45,10 +45,9 @@
   when: branch_check_local is defined
 
 ###############################################################################à
-- name: Set check_remote to true if failed to retrieve locally
+- name: Set check_remote to true if failed to retrieve locally else set to false if successful
   set_fact:
-    check_remote: true
-  when: commit_check_local.rc != 0 and branch_check_local is defined and branch_check_local.rc != 0
+    check_remote: "{{ commit_check_local.rc != 0 and branch_check_local is defined and branch_check_local.rc != 0 }}"
 
   # git ls-remote --refs origin | grep "{{ commit }}"
 - name: Check if {{ commit }} exists on remote
@@ -72,7 +71,7 @@
 
 - name: Fetch the branch from remote
   ansible.builtin.command:
-    cmd: "git fetch origin '{{ branch_ref }}:{{ branch | trim }}'"
+    cmd: git fetch origin "{{ branch_ref }}:{{ branch }} "
   args:
     chdir: "{{ path }}"
   register: branch_fetch
