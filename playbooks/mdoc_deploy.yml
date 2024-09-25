@@ -90,8 +90,12 @@
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
 
-    - name: Restart Net Manager
-      shell: 'nohup /bin/NetManager -p 6000 </dev/null >/tmp/netmanager.log 2>&1 &'
+    - name: Ensure NetManager service is running on node {{ inventory_hostname }}
+      systemd:
+        name: netmanager
+        state: started
+        enabled: true
+        daemon_reload: true
       become: true
       ignore_errors: false
 
@@ -105,11 +109,19 @@
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
 
-
-    - name: Run node-engine on node {{ inventory_hostname }}
+    - name: Start NodeEngine on {{ inventory_hostname }}
       environment:
         CLUSTER_IP: '{{ root_cluster_ip }}'
-      shell: 'nohup /bin/NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 </dev/null >/tmp/nodeengine.log 2>&1 &'
+      shell: 'NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 -d &'
+      become: true
+      ignore_errors: false
+
+    - name: Ensure systemctl nodeengine service is running on node {{ inventory_hostname }}
+      systemd:
+        name: nodeengine
+        state: started
+        enabled: true
+        daemon_reload: true
       become: true
       ignore_errors: false
 

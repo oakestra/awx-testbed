@@ -271,10 +271,14 @@
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
 
-    #- name: Restart Net Manager
-    #  shell: 'nohup /bin/NetManager -p 6000 </dev/null >/tmp/netmanager.log 2>&1 &'
-    #  become: true
-    #  ignore_errors: false
+    - name: Ensure NetManager service is running on node {{ inventory_hostname }}
+      systemd:
+        name: netmanager
+        state: started
+        enabled: true
+        daemon_reload: true
+      become: true
+      ignore_errors: false
 
     - name: Setup node engine entrypoint for node {{ inventory_hostname }}
       include_role:
@@ -289,7 +293,16 @@
     - name: Start NodeEngine on {{ inventory_hostname }}
       environment:
         CLUSTER_IP: '{{ cluster_node_ip }}'
-      shell: 'nohup NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 &'
+      shell: 'NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 -d &'
+      become: true
+      ignore_errors: false
+
+    - name: Ensure systemctl nodeengine service is running on node {{ inventory_hostname }}
+      systemd:
+        name: nodeengine
+        state: started
+        enabled: true
+        daemon_reload: true
       become: true
       ignore_errors: false
 
