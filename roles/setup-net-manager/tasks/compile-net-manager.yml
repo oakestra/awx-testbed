@@ -4,8 +4,8 @@
   vars:
     repo: "{{ oak_net_repo_link }}"
     path: "{{ oak_net_repo_path }}"
-    branch: "develop"  # oakestra-net, TODO: parameterize
-    commit: "HEAD"    # oakestra-net, TODO: parameterize
+    branch: "181-make-netmanager-systemd-compatible"  # oakestra-net, TODO: parameterize
+    commit: "3c6f6bf2d508a7d819933b5f74ca73691a6f2fda"    # oakestra-net, TODO: parameterize
 
 # This is installing go in a wierd path. Check if config is correct.
 - name: Check if Go is installed
@@ -15,14 +15,23 @@
     golang_version: '1.21.3'
     golang_install_dir: '/opt/go/1.21.3'
 
-- name: Install go dependencies
-  shell: "cd {{ oak_net_repo_path }}/node-net-manager && /opt/go/1.21.3/bin/go get ."
+- name: Build NodeEngine
+  shell: |
+    export PATH={{ golang_install_dir }}/bin:$PATH
+    cd {{ oak_net_repo_path }}/node-net-manager/build && ./build.sh
   args:
     executable: /bin/bash
-  ignore_errors: yes
+  become: true
 
-- name: Build Net Manager
-  shell: "cd {{ oak_net_repo_path }}/node-net-manager && /opt/go/1.21.3/bin/go build -o /bin/NetManager NetManager.go"
+- name: Copy NetManager binary to build directory
+  shell: >
+    cp {{ oak_net_repo_path }}/node-net-manager/build/bin/$(dpkg --print-architecture)-NetManager
+    {{ oak_net_repo_path }}/node-net-manager/build/
+  become: true
+
+
+- name: Install NodeEngine
+  shell: "cd {{ oak_net_repo_path }}/node-net-manager/build/ && ./install.sh $(dpkg --print-architecture)"
   args:
     executable: /bin/bash
   become: true
@@ -31,24 +40,24 @@
   ansible.builtin.file:
     path: "/etc/netmanager"
     state: directory
-  ignore_errors: yes
+  ignore_errors: true
   become: true
 
 - name: Copy netcfg.json config files of net manager
   ansible.builtin.copy:
     src: "{{ oak_net_repo_path }}/node-net-manager/config/netcfg.json"
     dest: "/etc/netmanager/netcfg.json"
-    remote_src: yes
+    remote_src: true
   become: true
 
 - name: Copy tuncfg.json config files of net manager
   ansible.builtin.copy:
     src: "{{ oak_net_repo_path }}/node-net-manager/config/tuncfg.json"
     dest: "/etc/netmanager/netcfg.json"
-    remote_src: yes
+    remote_src: true
   become: true
 
-- name: Config netmanager public address 
+- name: Config netmanager public address
   environment:
     PUB_ADDR: "{{ nodeIP }}"
     CFG_DIR: "{{ oak_net_repo_path }}"
