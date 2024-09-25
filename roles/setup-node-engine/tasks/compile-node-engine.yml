@@ -17,10 +17,13 @@
     
 ##################### WIP: make NodeEngine systemd compatible
 - name: Build NodeEngine
-  shell: "cd {{ oak_repo_path }}/go_node_engine/build && ./build.sh"
+  shell: |
+    export PATH={{ golang_install_dir }}/bin:$PATH
+    cd {{ oak_repo_path }}/go_node_engine/build && ./build.sh
   args:
     executable: /bin/bash
   become: true
+
 
 - name: Install NodeEngine
   shell: "cd {{ oak_repo_path }}/go_node_engine/build && ./install.sh $(dpkg --print-architecture)"
