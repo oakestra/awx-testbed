@@ -5,6 +5,7 @@
     state: stopped
     enabled: false
   become: true
+  ignore_errors: true
 
 - name: Stop and disable netmanager service
   systemd:
@@ -12,36 +13,42 @@
     state: stopped
     enabled: false
   become: true
+  ignore_errors: true
 
 - name: Remove nodeengine service file
   file:
     path: /etc/systemd/system/nodeengine.service
     state: absent
   become: true
+  ignore_errors: true
 
 - name: Remove netmanager service file
   file:
     path: /etc/systemd/system/netmanager.service
     state: absent
   become: true
+  ignore_errors: true
 
 - name: Remove NodeEngine binary
   file:
     path: /bin/NodeEngine
     state: absent
   become: true
+  ignore_errors: true
 
 - name: Remove nodeengined binary
   file:
     path: /bin/nodeengined
     state: absent
   become: true
+  ignore_errors: true
 
 - name: Remove log directory for Oakestra
   file:
     path: /var/log/oakestra
     state: absent
   become: true
+  ignore_errors: true
 
 - name: Reload systemd to reflect changes
   systemd:
