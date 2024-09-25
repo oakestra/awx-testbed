@@ -39,7 +39,7 @@
 
 - name: Check NodeEngine log files for errors
   shell: |
-    cat /tmp/nodeengine.log | grep "ERROR"
+    cat /var/log/oakestra/nodeengine.log | grep "ERROR"
   register: nodeengine_error
   ignore_errors: true
 

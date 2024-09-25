@@ -271,10 +271,10 @@
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
 
-    - name: Restart Net Manager
-      shell: 'nohup /bin/NetManager -p 6000 </dev/null >/tmp/netmanager.log 2>&1 &'
-      become: true
-      ignore_errors: false
+    #- name: Restart Net Manager
+    #  shell: 'nohup /bin/NetManager -p 6000 </dev/null >/tmp/netmanager.log 2>&1 &'
+    #  become: true
+    #  ignore_errors: false
 
     - name: Setup node engine entrypoint for node {{ inventory_hostname }}
       include_role:
@@ -286,12 +286,13 @@
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
 
-    - name: Run node-engine on node {{ inventory_hostname }}
+    - name: Start NodeEngine on {{ inventory_hostname }}
       environment:
         CLUSTER_IP: '{{ cluster_node_ip }}'
-      shell: 'nohup /bin/NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 </dev/null >/tmp/nodeengine.log 2>&1 &'
+      shell: 'nohup NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 &'
       become: true
       ignore_errors: false
+
 
 - name: Define stats for component status check
   hosts: localhost
