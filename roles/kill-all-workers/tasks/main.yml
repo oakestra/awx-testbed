@@ -1,24 +1,49 @@
-- name: Find PIDs of NodeEngine
-  shell: |
-    pgrep -f NodeEngine || true
-  register: node_pids
-
-- name: Find PIDs of NetManager
-  shell: |
-    pgrep -f NetManager || true
-  register: net_pids
-
-- name: Set fact for NodeEngine PIDs
-  set_fact:
-    node_pids_list: "{{ node_pids.stdout_lines }}"
-
-- name: Set fact for NetManager PIDs
-  set_fact:
-    net_pids_list: "{{ net_pids.stdout_lines }}"
-
-- name: Kill existing NodeEngine & NetManager processes
-  shell: |
-    kill -9 {{ item }}
-  loop: "{{ node_pids_list + net_pids_list }}"
+---
+- name: Stop and disable nodeengine service
+  systemd:
+    name: nodeengine
+    state: stopped
+    enabled: false
   become: true
-  ignore_errors: true
+
+- name: Stop and disable netmanager service
+  systemd:
+    name: netmanager
+    state: stopped
+    enabled: false
+  become: true
+
+- name: Remove nodeengine service file
+  file:
+    path: /etc/systemd/system/nodeengine.service
+    state: absent
+  become: true
+
+- name: Remove netmanager service file
+  file:
+    path: /etc/systemd/system/netmanager.service
+    state: absent
+  become: true
+
+- name: Remove NodeEngine binary
+  file:
+    path: /bin/NodeEngine
+    state: absent
+  become: true
+
+- name: Remove nodeengined binary
+  file:
+    path: /bin/nodeengined
+    state: absent
+  become: true
+
+- name: Remove log directory for Oakestra
+  file:
+    path: /var/log/oakestra
+    state: absent
+  become: true
+
+- name: Reload systemd to reflect changes
+  systemd:
+    daemon_reload: true
+  become: true
