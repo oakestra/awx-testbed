@@ -8,14 +8,26 @@ To achieve this, two execution modes have been identified:
 
 Although the two execution modes share common elements, their differing behavior necessitates separating the testbed into two branches: `custom` for Custom Execution and `oneshot` for Oneshot Execution.
 
+---
+### 📖 Table of Contents
+- [Topology Descriptor](#topology-descriptor)  
+  - [Anatonomy of a Topology Descriptor](#anatonomy-of-a-topology-descriptor)
+- [Usage](#usage)
+  - [1. Custom Execution 🔬](#1-custom-execution-🔬)
+  - [2. Oneshot Execution 🎯](#2-oneshot-execution-🎯)
+- [Structure](#structure)
+
 ## Topology Descriptor
+<a name="topology-descriptor"></a>
+
 By *use cases* or *scenarios*, we mean a specific configuration of multiple nodes, which can function as root, cluster, or worker nodes, and have applications deployed on them with defined constraints regarding where these deployments should occur. 
 
-To facilitate this, we introduced the concept of a **Topology Descriptor** *(TD)*, a JSON file that specify which deployment mode execute among *1-DOC (One device, One Cluster), M-DOC (*$M$ *Devices, One Cluster)* and *MDNC (*$M$ *Devices,* $N$ *Clusters)*. For more information about deployment mode, please refer [Create your first cluster](https://www.oakestra.io/docs/getstarted/get-started-cluster/#create-your-first-oakestra-cluster). 
+To facilitate this, we introduced the concept of a **Topology Descriptor** ***(TD)***, a JSON file that specify which deployment mode execute among *1-DOC (One device, One Cluster), M-DOC (*$M$ *Devices, One Cluster)* and *MDNC (*$M$ *Devices,* $N$ *Clusters)*. For more information about deployment mode, please refer [Create your first cluster](https://www.oakestra.io/docs/getstarted/get-started-cluster/#create-your-first-oakestra-cluster). 
 
 So a *TD* add meta-information to one or more [Deployment Descriptor](https://www.oakestra.io/docs/getstarted/get-started-app/#deployment-descriptor)(s), slightly modifying it temporarly for testing purpose, as we will explain later.
 
 ### Anatonomy of a Topology Descriptor
+<a name="anatonomy-of-a-topology-descriptor"></a>
 The general struscture of a *TD* is the following, mostly shared with the structure of a Deployment Descriptor:
 ```json
 {
@@ -82,8 +94,10 @@ If there is only one application, its microservices are distributed across the w
 For both execution mode, the available Topology Descriptors can be found under `/topologies` folder.
 
 ## Usage
+<a name="usage"></a>
 
 ### 1. Custom Execution 🔬
+<a name="1-custom-execution-🔬"></a>
 Mantainers that have write access to oakestra repository can find under *Actions* tab in Github the corresponding action called "**Execute Custom Testbed Workflow Pipeline**". Click on *Run Workflow* will make appear the following box:
 
 ![](./imgs/custom_trigger_1.png)
@@ -107,6 +121,8 @@ For more details about the custom execution, refer the [custom documentation REA
 
 ---
 ### 2. Oneshot Execution 🎯
+<a name="2-oneshot-execution-🎯"></a>
+
 This execution mode is triggered when a PR review is approved by one of the reviewers, triggering two action on [oakestra]() repository, one visible directly in the PR section, as shown:
 
 ![](./imgs/oneshot_trigger_1.png)
@@ -121,6 +137,73 @@ The first action, named *Waiting Cycle*, has been introduced to avoid sharing an
 The corresponding *Waiting Cycle* report the failure under the PR section:
 ![](./imgs/oneshot_trigger_4.png)
 
-ℹ️  The full execution logs are not available to maintainers because the oneshot execution triggers a different workflow job template compared to custom execution. The output is accessible only to administrator accounts.
+⚠️ The complete execution logs are not accessible to maintainers, as the oneshot execution triggers a different workflow job template than custom execution. Only administrator accounts have access to the output.
+
 
 For more details about the oneshot execution, refer the [oneshot documentation README ](https://github.com/oakestra/awx-testbed/tree/oneshot).
+
+
+## Structure
+<a name="structure"></a>
+
+Both branches, or execution methods, share nearly the same folder structure and execution logic, with minor differences to distinguish the two behaviors. 
+
+The common structure is outlined below:
+
+```bash
+├── ansible.cfg
+├── collections
+│   └── requirements.yml
+├── playbooks                         # Pipeline main phases playbooks
+│   ├── topology_validator.yml        # Phase 1 (Mandatory)
+│   ├── provision_test.yml            # Phase 2 (Mandatory)
+│   ├── one_doc_deploy.yml            # Phase 3 (Execution-Dependant)
+│   ├── mdoc_deploy.yml               # Phase 3 (Execution-Dependant)
+│   ├── mdnc_deploy.yml               # Phase 3 (Execution-Dependant)
+│   ├── components_test.yml           # Phase 4 (Mandatory)
+│   ├── deploy_status_app.yml         # Phase 5 (Mandatory)
+│   └── stop_cleanup_components.yml   # Phase 6 (Mandatory)
+├── README.md
+├── roles
+│   ├── build-container
+│   ├── cleanup-node-files
+│   ├── cleanup-root-cluster
+│   ├── ensure-mac-address-generation-allowed
+│   ├── ensure-oakestra-repo-is-cloned
+│   ├── gantsign.ansible-role-golang
+│   ├── gantsign.golang
+│   ├── kill-all-workers
+│   ├── kill-root-cluster
+│   ├── root-cluster-running-check
+│   ├── run-cluster
+│   ├── run-root
+│   ├── set-role-availability
+│   ├── setup-net-manager
+│   ├── setup-node-engine
+│   ├── start-1-doc
+│   ├── topology-app-deploy
+│   ├── unset-role-availability
+│   └── worker-running-check
+├── topologies
+│   ├── 1doc.json
+│   ├── 2d1c.json
+│   ├── 2d2c.json
+│   ├── 3d1c2app.json
+│   └── 3d1c.json
+└── utils
+    ├── mdnc_deploy
+    │   └── combination.py
+    ├── topology-app-deploy
+    │   ├── requirements.txt
+    │   └── update_sla.py
+    └── topology_validator
+        └── validator.py
+```
+The `oneshot` branch includes an additional support script under the `/utils` directory to handle the customized provisioning logic.
+
+```bash
+└── utils
+    ├── provisioning # Oneshot Custom Provisioning Logic
+    │   └── hosts_provision.py
+  ...
+```
