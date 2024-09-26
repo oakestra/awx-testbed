@@ -1,49 +1,58 @@
-- name: Find PIDs of NodeEngine
-  shell: |
-    pgrep -f NodeEngine || true
-  register: node_pids
-
-- name: Find PIDs of NetManager
-  shell: |
-    pgrep -f NetManager || true
-  register: net_pids
-
-- name: Set fact for NodeEngine PIDs
-  set_fact:
-    node_pids_list: "{{ node_pids.stdout_lines }}"
-
-- name: Check node_pids_list is not empty
-  fail:
-    msg: "NodeEngine PIDs not found"
-  when: node_pids_list == []
-
-- name: Set fact for NetManager PIDs
-  set_fact:
-    net_pids_list: "{{ net_pids.stdout_lines }}"
-
-- name: Check net_pids_list is not empty
-  fail:
-    msg: "NetManager PIDs not found"
-  when: net_pids_list == []
-
-- name: Check NetManager log files for errors
-  shell: |
-    cat /tmp/netmanager.log | grep "ERROR"
-  register: netmanager_error
+---
+- name: Verify nodeengine service status
+  systemd:
+    name: nodeengine
+    state: started
+  become: true
+  register: nodeengine_status
   ignore_errors: true
 
-- name: Show NetManager error log
+- name: Check if nodeengine service is running
   debug:
-    msg: "{{ netmanager_error.stdout }}"
-  when: netmanager_error.stdout is defined
+    msg: "NodeEngine service is running."
+  when: nodeengine_status is defined and nodeengine_status.state == 'running'
 
-- name: Check NodeEngine log files for errors
-  shell: |
-    cat /tmp/nodeengine.log | grep "ERROR"
-  register: nodeengine_error
+- name: Verify netmanager service status
+  systemd:
+    name: netmanager
+    state: started
+  become: true
+  register: netmanager_status
   ignore_errors: true
 
-- name: Show NodeEngine error log
+- name: Check if netmanager service is running
   debug:
-    msg: "{{ nodeengine_error.stdout }}"
-  when: nodeengine_error.stdout is defined
+    msg: "NetManager service is running."
+  when: netmanager_status is defined and netmanager_status.state == 'running'
+
+- name: Check if nodeengine.log contains "Error"
+  command: grep -i 'error' /var/log/oakestra/nodeengine.log
+  register: error_check
+  ignore_errors: true
+
+- name: Report if "Error" was found in nodeengine.log and display the errors
+  debug:
+    msg: "'Error' found in nodeengine.log:\n{{ error_check.stdout }}"
+  when: error_check.stdout | length > 0
+  ignore_errors: true
+
+- name: Report if "Error" was not found in nodeengine.log
+  debug:
+    msg: "'Error' not found in nodeengine.log"
+  when: error_check.stdout | length == 0
+  ignore_errors: true
+
+- name: Check if netmanager.log contains the word "Error"
+  command: grep -i 'error' /var/log/oakestra/netmanager.log
+  register: netmanager_error_check
+  ignore_errors: true
+
+- name: Report if "Error" was found in netmanager.log
+  debug:
+    msg: "'Error' found in netmanager.log:\n{{ netmanager_error_check.stdout }}"
+  when: netmanager_error_check.stdout | length > 0
+
+- name: Report if "Error" was not found in netmanager.log
+  debug:
+    msg: "'Error' not found in netmanager.log"
+  when: netmanager_error_check.stdout | length == 0
