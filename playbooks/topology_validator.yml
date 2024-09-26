@@ -77,5 +77,8 @@
         data:
           topology_desc: "{{ topology_descriptor_content | to_json}}"
           topology_validity: "{{ TOPOLOGY_VALIDITY | bool}}"
+          oak_repo_branch: "{{ branch }}"
           oak_repo_commit: "{{ commit }}"
+          oak_net_repo_branch: "{{ net-branch }}"
+          oak_net_repo_commit: "{{ net-commit }}"
           testbed_tmp_path: "{{ temp_repo_dir.path }}"

@@ -18,8 +18,8 @@
       vars:
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
-        commit: "{{ commit }}"
+        branch: "{{ oak_repo_branch }}"
+        commit: "{{ oak_repo_commit }}"
       
     - name: Start 1DOC components (node {{ inventory_hostname }})
       include_role:
@@ -30,12 +30,12 @@
         clusterLocation: "Garching2"
         additionalComposeOverrides: "-f override-alpha-versions.yaml"
 
-    - name: Set OAK_ROLE environment variables on worker node
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: "OAK_ROLE=worker_{{ inventory_hostname }}"
-        create: yes
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "onedoc_{{ inventory_hostname }}"
+        status: "busy"
 
     - name: Setup network manager entrypoint for node {{ inventory_hostname }}
       include_role:

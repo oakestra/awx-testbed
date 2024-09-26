@@ -1,0 +1,14 @@
+---
+- name: OAK_STATUS environment variable to {{ status }}
+  ansible.builtin.lineinfile:
+      path: /etc/environment
+      regexp: '^OAK_STATUS='
+      create: true
+      line: 'OAK_STATUS={{ status }}'
+
+- name: Set OAK_ROLE environment variables to {{ role }}
+  ansible.builtin.lineinfile:
+      path: /etc/environment
+      regexp: '^OAK_ROLE='
+      line: "OAK_ROLE={{ role }}"
+      create: true

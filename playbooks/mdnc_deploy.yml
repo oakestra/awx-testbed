@@ -76,12 +76,12 @@
     branch: "{{ oak_repo_version }}"
 
   tasks:
-    - name: Set OAK_ROLE environment variables on root node
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: 'OAK_ROLE=root'
-        create: true
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "root"
+        status: "busy"
 
     - name: Set environment variables for deployment root (node {{ inventory_hostname }})
       set_fact:
@@ -123,12 +123,12 @@
   hosts: "{{ group_clusters_full }}"
 
   tasks:
-    - name: Set OAK_ROLE environment variables on cluster node {{ inventory_hostname }}
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: "OAK_ROLE=cluster_{{ inventory_hostname }}"
-        create: yes
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "cluster_{{ inventory_hostname }}"
+        status: "busy"
 
     - name: Set environment variables for deployment cluster
       set_fact:
@@ -174,12 +174,12 @@
 - name: Deploy worker components for full topology
   hosts: "{{ group_workers_full }}"
   tasks:
-    - name: Set OAK_ROLE environment variables on worker node {{ inventory_hostname }}
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: "OAK_ROLE=worker_{{ inventory_hostname }}"
-        create: true
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "worker_{{ inventory_hostname }}"
+        status: "busy"
 
     - name: Set environment variables for deployment node (worker {{ inventory_hostname }})
       set_fact:

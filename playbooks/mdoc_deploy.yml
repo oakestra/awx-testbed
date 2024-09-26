@@ -7,12 +7,12 @@
     branch: "{{ oak_repo_version }}"
 
   tasks:
-    - name: Set OAK_ROLE environment variables on root node
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: 'OAK_ROLE=root'
-        create: true
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "root"
+        status: "busy"
 
     - name: Include role to ensure cloned repo
       include_role:
@@ -65,12 +65,12 @@
       debug:
         msg: "Root&Cluster IP address for worker {{ inventory_hostname }} is {{ root_cluster_ip }}"
 
-    - name: Set OAK_ROLE environment variables on worker node {{ inventory_hostname }}
-      ansible.builtin.lineinfile:
-        path: /etc/environment
-        regexp: '^OAK_ROLE='
-        line: "OAK_ROLE=worker_{{ inventory_hostname }}"
-        create: true
+    - name: Set OAK_STATUS and OAK_ROLE by including role
+      include_role:
+        name: set-role-availability
+      vars:
+        role: "worker_{{ inventory_hostname }}"
+        status: "busy"
 
     - name: Setup network manager entrypoint for node {{ inventory_hostname }}
       include_role:
