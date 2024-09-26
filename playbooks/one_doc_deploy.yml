@@ -20,7 +20,7 @@
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_branch }}"
         commit: "{{ oak_repo_commit }}"
-      
+
     - name: Start 1DOC components (node {{ inventory_hostname }})
       include_role:
         name: start-1-doc
