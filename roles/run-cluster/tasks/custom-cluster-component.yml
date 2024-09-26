@@ -5,6 +5,7 @@
     repo: "{{ oak_net_repo_link }}"
     path: "{{ oak_net_repo_path }}"
     branch: "{{ oak_net_repo_version }}"
+    commit: "{{ oak_net_repo_commit }}"
 
 - name: Build net container
   ansible.builtin.include_role: 

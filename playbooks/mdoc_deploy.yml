@@ -21,6 +21,7 @@
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
+        commit: "{{ oak_repo_commit }}"
 
     - name: Retrieve rootIP address from hostname
       set_fact:

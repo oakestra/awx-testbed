@@ -11,7 +11,6 @@
         msg: "IP address not found for current node {{ inventory_hostname }}"
       when: current_ip == "IP address not found"
 
-
     - name: Verify Oakestra repo is cloned (node {{ inventory_hostname }})
       include_role:
         name: ensure-oakestra-repo-is-cloned
@@ -43,9 +42,10 @@
       vars:
         nodeIP: "{{ current_ip }}"
         clusterIP: "{{ current_ip }}"
-        path: "{{ oak_repo_path }}"
-        repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        path: "{{ oak_net_repo_path }}"
+        repo: "{{ oak_net_repo_link }}"
+        branch: "{{ oak_net_repo_branch: }}"
+        commit: "{{ oak_net_repo_commit }}"
 
     - name: Run net-manager on node {{ inventory_hostname }}
       shell: 'nohup sudo /bin/NetManager -p 6000 </dev/null >/tmp/netmanager.log 2>&1 &'
@@ -61,6 +61,7 @@
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
         branch: "{{ oak_repo_version }}"
+        commit: "{{ oak_repo_commit }}"
 
     - name: Run node-engine on node {{ inventory_hostname }}
       environment:
