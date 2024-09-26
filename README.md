@@ -86,7 +86,11 @@ Mantainers that have write access to oakestra repository can find under *Actions
 
 ![](./imgs/custom_trigger_1.png)
 
-For security reason, the 
+The execution of a **forked repository** from a specific branch `$USERNAME:$BRANCH` is permitted by specifying the `$BRANCH` name as the branch (for either Oakestra or Oakestra-net) and providing a **specific commit** (e.g., the latest commit hash of `$BRANCH`).
+
+⚠️ Leaving `HEAD` for the branch execution of a forked repository will cause the execution to fail.
+
+
 To not expose internal information publicly, the output of the triggered workflow will only print the reference to on the Testbed for check the specific logs of the testbed. The action uses the AWX API to trigger the execution of the corresponding Workflow Job Template on AWX:
 
 ![](./imgs/custom_trigger_2.png)
@@ -100,5 +104,17 @@ The specific log will refer to the output of the **🔬 [Custom] Oakestra Testbe
 For more details about the custom execution, refer the [custom documentation README ](https://github.com/oakestra/awx-testbed/tree/custom).
 
 ### 2. Oneshot Execution
-This execution mode is triggered when a PR review is approved by one of the reviewers, triggering two action on [oakestra]() repository, as shown:
+This execution mode is triggered when a PR review is approved by one of the reviewers, triggering two action on [oakestra]() repository, one visible directly in the PR section, as shown:
+
+![](./imgs/oneshot_trigger_1.png)
+
+And one running in background: this second Action is reacheable under *Actions* section of Github, under the name *"Testbed Oneshot - Multiple Scenarios Test Deployment"*, reporting the execution details and the execution status:
+
+![](./imgs/oneshot_trigger_2.png)
+
+The first action, named *Waiting Cycle*, has been introduced to avoid sharing any repository secret with external/forked repository. The actual output of the execution is represented by the log of the second action, namely *Oneshot Execution*. When this second action fail:
+![](./imgs/oneshot_trigger_3.png)
+
+The corresponding *Waiting Cycle* report the failure under the PR section:
+![](./imgs/oneshot_trigger_4.png)
 
