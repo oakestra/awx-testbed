@@ -1,1 +1,13 @@
-# Oneshot Testbed Structure
+# Oneshot Testbed 🎯
+
+
+## Phases
+
+
+
+## Structure
+
+
+
+
+## FAQ
