@@ -18,7 +18,7 @@
       vars:
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        branch: "{{ oak_repo_branch }}"
         commit: "{{ oak_repo_commit }}"
 
     - name: Start 1DOC components (node {{ inventory_hostname }})
@@ -43,9 +43,10 @@
       vars:
         nodeIP: "{{ current_ip }}"
         clusterIP: "{{ current_ip }}"
-        path: "{{ oak_repo_path }}"
-        repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        path: "{{ oak_net_repo_path }}"
+        repo: "{{ oak_net_repo_link }}"
+        branch: "{{ oak_net_repo_branch }}"
+        commit: "{{ oak_net_repo_commit }}"
 
     - name: Ensure NetManager service is running on node {{ inventory_hostname }}
       systemd:
@@ -70,7 +71,7 @@
         clusterIP: "{{ cluster_node_ip }}"
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        branch: "{{ oak_repo_branch }}"
         commit: "{{ oak_repo_commit }}"
 
     - name: Start NodeEngine on {{ inventory_hostname }}

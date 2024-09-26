@@ -1,16 +1,16 @@
 - name: Ensure cloned repo
   ansible.builtin.include_role: 
     name: ensure-oakestra-repo-is-cloned
-  vars: 
+  vars:
     repo: "{{ oak_net_repo_link }}"
     path: "{{ oak_net_repo_path }}"
-    branch: "{{ oak_net_repo_version }}"
-    commit: "HEAD" # oakestra-net, TODO: parameterize
+    branch: "{{ oak_net_repo_branch }}"
+    commit: "{{ oak_net_repo_commit }}"
 
 - name: Build net container
-  ansible.builtin.include_role: 
+  ansible.builtin.include_role:
     name: build-container
-  vars: 
+  vars:
     image_name: "local_cluster_service_manager"
     dockerfile_path: "{{ oak_net_repo_path }}/cluster-service-manager/service-manager"
 
@@ -20,4 +20,4 @@
     CLUSTER_NAME: '{{ clusterName }}'
     CLUSTER_LOCATION: '{{ clusterLocation }}'
   shell: "cd  {{ oak_repo_path }}/cluster_orchestrator && nohup docker compose -f docker-compose.yml -f override-local-service-manager.yml up --build --detach"  
-  become: True
+  become: true

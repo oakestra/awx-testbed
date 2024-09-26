@@ -5,9 +5,9 @@
     CLUSTER_LOCATION: '{{ clusterLocation }}'
   shell: cd  {{ oak_repo_path }}/cluster_orchestrator && nohup docker compose -f docker-compose.yml {{ additionalComposeOverrides }} up --build --detach  
   become: true
-  when: '"v0." in oak_net_repo_version'
+  when: '"v0." in oak_net_repo_branch'
 
 - name: Run Cluster Components with custom version
   import_tasks: custom-cluster-component.yml
   become: true
-  when: 'not "v0." in oak_net_repo_version'
+  when: 'not "v0." in oak_net_repo_branch'

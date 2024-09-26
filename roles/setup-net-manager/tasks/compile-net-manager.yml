@@ -4,8 +4,8 @@
   vars:
     repo: "{{ oak_net_repo_link }}"
     path: "{{ oak_net_repo_path }}"
-    branch: "181-make-netmanager-systemd-compatible"  # oakestra-net, TODO: parameterize
-    commit: "3c6f6bf2d508a7d819933b5f74ca73691a6f2fda"    # oakestra-net, TODO: parameterize
+    branch: "{{ oak_net_repo_branch }}" 
+    commit: "{{ oak_net_repo_commit}}"
 
 # This is installing go in a wierd path. Check if config is correct.
 - name: Check if Go is installed

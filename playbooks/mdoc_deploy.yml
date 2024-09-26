@@ -4,7 +4,7 @@
   vars:
     repo: "{{ oak_repo_link }}"
     path: "{{ oak_repo_path }}"
-    branch: "{{ oak_repo_version }}"
+    branch: "{{ oak_repo_branch }}"
     commit: "{{ oak_repo_commit }}"
 
   tasks:
@@ -26,7 +26,7 @@
       vars:
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        branch: "{{ oak_repo_branch }}"
         commit: "{{ oak_repo_commit }}"
 
 
@@ -86,9 +86,10 @@
       vars:
         nodeIP: "{{ root_cluster_ip }}"
         clusterIP: "{{ root_cluster_ip }}"
-        path: "{{ oak_repo_path }}"
-        repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        path: "{{ oak_net_repo_path }}"
+        repo: "{{ oak_net_repo_link }}"
+        branch: "{{ oak_net_repo_branch }}"
+        commit: "{{ oak_net_repo_commit }}"
 
     - name: Ensure NetManager service is running on node {{ inventory_hostname }}
       systemd:
@@ -107,7 +108,8 @@
         clusterIP: "{{ root_cluster_ip }}"
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        branch: "{{ oak_repo_branch }}"
+        commit: "{{ oak_repo_commit }}"
 
     - name: Start NodeEngine on {{ inventory_hostname }}
       environment:

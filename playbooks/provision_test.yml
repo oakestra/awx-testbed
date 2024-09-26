@@ -81,8 +81,10 @@
             extra_vars:
               input_data: "{{ item }}"
               testbed_tmp_path: "{{ testbed_tmp_path }}"
-              oak_repo_version: "{{ oak_repo_branch }}"
+              oak_repo_branch: "{{ oak_repo_branch }}"
               oak_repo_commit: "{{ oak_repo_commit }}"
+              oak_net_repo_branch: "{{ oak_net_repo_branch }}"
+              oak_net_repo_commit: "{{ oak_net_repo_commit }}"
               topologies_folder: "{{ topologies_folder }}"
             validate_certs: false
             controller_oauthtoken: "{{ token }}"
@@ -96,8 +98,10 @@
             extra_vars:
               input_data: "{{ item }}"
               testbed_tmp_path: "{{ testbed_tmp_path }}"
-              oak_repo_version: "{{ oak_repo_branch }}"
+              oak_repo_branch: "{{ oak_repo_branch }}"
               oak_repo_commit: "{{ oak_repo_commit }}"
+              oak_net_repo_branch: "{{ oak_net_repo_branch }}"
+              oak_net_repo_commit: "{{ oak_net_repo_commit }}"
               topologies_folder: "{{ topologies_folder }}"
             validate_certs: false
             controller_oauthtoken: "{{ token }}"
@@ -111,8 +115,10 @@
             extra_vars:
               input_data: "{{ item }}"
               testbed_tmp_path: "{{ testbed_tmp_path }}"
-              oak_repo_version: "{{ oak_repo_branch }}"
+              oak_repo_branch: "{{ oak_repo_branch }}"
               oak_repo_commit: "{{ oak_repo_commit }}"
+              oak_net_repo_branch: "{{ oak_net_repo_branch }}"
+              oak_net_repo_commit: "{{ oak_net_repo_commit }}"
               topologies_folder: "{{ topologies_folder }}"
               onedoc: false
               mdoc: false

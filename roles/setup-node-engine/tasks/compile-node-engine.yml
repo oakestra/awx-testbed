@@ -4,7 +4,7 @@
   vars:
     repo: "{{ oak_repo_link }}"
     path: "{{ oak_repo_path }}"
-    branch: "{{ oak_repo_version }}"
+    branch: "{{ oak_repo_branch }}"
     commit: "{{ oak_repo_commit }}"
 
 
