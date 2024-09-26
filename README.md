@@ -83,13 +83,22 @@ If there is only one application, its microservices are distributed across the w
 
 ### 1. Custom Execution
 Mantainers that have write access to oakestra repository can find under *Actions* tab in Github the corresponding action called "**Execute Custom Testbed Workflow Pipeline**". Click on *Run Workflow* will make appear the following box:
+
 ![](./imgs/custom_trigger_1.png)
 
+For security reason, the 
+To not expose internal information publicly, the output of the triggered workflow will only print the reference to on the Testbed for check the specific logs of the testbed. The action uses the AWX API to trigger the execution of the corresponding Workflow Job Template on AWX:
+
+![](./imgs/custom_trigger_2.png)
+
+The specific log will refer to the output of the **🔬 [Custom] Oakestra Testbed Execution Pipeline** workflow job template on the AWX Dashboard. Oakestra maintainers can access the logs using their GitHub account associated with the Oakestra Organization by clicking on the GitHub icon:
 
 
-### Expected Behaviours
+![](./imgs/custom_trigger_3.png)
 
 
+For more details about the custom execution, refer the [custom documentation README ](https://github.com/oakestra/awx-testbed/tree/custom).
 
+### 2. Oneshot Execution
+This execution mode is triggered when a PR review is approved by one of the reviewers, triggering two action on [oakestra]() repository, as shown:
 
-## Technical Documentation
