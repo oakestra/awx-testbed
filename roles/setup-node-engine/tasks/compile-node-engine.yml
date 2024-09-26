@@ -4,24 +4,28 @@
   vars:
     repo: "{{ oak_repo_link }}"
     path: "{{ oak_repo_path }}"
-    branch: "{{ oak_repo_version }}"
+    branch: "{{ oak_repo_branch }}"
     commit: "{{ oak_repo_commit }}"
 
+
 - name: Check if Go is installed
-  ansible.builtin.include_role:
+  ansible.builtin.include_role: 
     name: gantsign.golang
   vars:
     golang_version: '1.21.3'
     golang_install_dir: '/opt/go/1.21.3'
 
-- name: Install go dependencies
-  shell: "cd {{ oak_repo_path }}/go_node_engine && /opt/go/1.21.3/bin/go get ."
+- name: Build NodeEngine
+  shell: |
+    export PATH={{ golang_install_dir }}/bin:$PATH
+    cd {{ oak_repo_path }}/go_node_engine/build && ./build.sh
   args:
     executable: /bin/bash
-  ignore_errors: yes
+  become: true
 
-- name: Build Node Engine 
-  shell: "cd {{ oak_repo_path }}/go_node_engine && /opt/go/1.21.3/bin/go build -o /bin/NodeEngine NodeEngine.go"
+
+- name: Install NodeEngine
+  shell: "cd {{ oak_repo_path }}/go_node_engine/build && ./install.sh $(dpkg --print-architecture)"
   args:
     executable: /bin/bash
   become: true

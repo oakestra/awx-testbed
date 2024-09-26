@@ -73,7 +73,8 @@
   vars:
     repo: "{{ oak_repo_link }}"
     path: "{{ oak_repo_path }}"
-    branch: "{{ oak_repo_version }}"
+    branch: "{{ oak_repo_branch }}"
+    commit: "{{ oak_repo_commit }}"
 
   tasks:
     - name: Set OAK_STATUS and OAK_ROLE by including role
@@ -100,7 +101,7 @@
       vars:
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        branch: "{{ oak_repo_branch }}"
         commit: "{{ oak_repo_commit }}"
 
     - name: Retrieve rootIP address from hostname
@@ -160,7 +161,7 @@
       vars:
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        branch: "{{ oak_repo_branch }}"
         commit: "{{ oak_repo_commit }}"
 
     - name: Run cluster entrypoint for node {{ inventory_hostname }}
@@ -237,12 +238,17 @@
       vars:
         nodeIP: "{{ cluster_node_ip }}"
         clusterIP: "{{ cluster_node_ip }}"
-        path: "{{ oak_repo_path }}"
-        repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        path: "{{ oak_net_repo_path }}"
+        repo: "{{ oak_net_repo_link }}"
+        branch: "{{ oak_net_repo_branch }}"
+        commit: "{{ oak_net_repo_commit }}"
 
-    - name: Restart Net Manager
-      shell: 'nohup /bin/NetManager -p 6000 </dev/null >/tmp/netmanager.log 2>&1 &'
+    - name: Ensure NetManager service is running on node {{ inventory_hostname }}
+      systemd:
+        name: netmanager
+        state: started
+        enabled: true
+        daemon_reload: true
       become: true
       ignore_errors: false
 
@@ -254,12 +260,21 @@
         clusterIP: "{{ cluster_node_ip }}"
         path: "{{ oak_repo_path }}"
         repo: "{{ oak_repo_link }}"
-        branch: "{{ oak_repo_version }}"
+        branch: "{{ oak_repo_branch }}"
+        commit: "{{ oak_repo_commit }}"
 
-    - name: Run node-engine on node {{ inventory_hostname }}
+    - name: Start NodeEngine on {{ inventory_hostname }}
       environment:
         CLUSTER_IP: '{{ cluster_node_ip }}'
-      shell: 'nohup /bin/NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 </dev/null >/tmp/nodeengine.log 2>&1 &'
+      shell: 'NodeEngine -n 6000 -a $CLUSTER_IP -p 10100 -d &'
       become: true
       ignore_errors: false
 
+    - name: Ensure systemctl nodeengine service is running on node {{ inventory_hostname }}
+      systemd:
+        name: nodeengine
+        state: started
+        enabled: true
+        daemon_reload: true
+      become: true
+      ignore_errors: false

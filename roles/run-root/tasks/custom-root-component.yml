@@ -4,7 +4,7 @@
   vars: 
       repo: "{{ oak_net_repo_link }}"
       path: "{{ oak_net_repo_path }}"
-      branch: "{{ oak_net_repo_version }}"
+      branch: "{{ oak_net_repo_branch }}"
       commit: "{{ oak_net_repo_commit }}"
   
 - name: Build net container
