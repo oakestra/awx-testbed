@@ -79,6 +79,8 @@ If there is only one application, its microservices are distributed across the w
 
  - **`sla_descriptor`**: Contains the same information as the [Deployment Descriptor](https://www.oakestra.io/docs/getstarted/get-started-app/#deployment-descriptor), with an additional field, `expected_output`, used only by the testbed. This field is not required or used by Oakestra and is removed before deploying the related applications. It allows the testbed to compare the logs of specific microservices against the defined `expected_output`, serving as a basic health check for the microservice.
 
+For both execution mode, the available Topology Descriptors can be found under `/topologies` folder.
+
 ## Usage
 
 ### 1. Custom Execution 🔬
